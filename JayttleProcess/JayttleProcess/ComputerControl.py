@@ -186,15 +186,12 @@ def auto_turn_off():
     move_and_click(592, 1433)#关机
 
 
-def TBC_auto_Process():
+def TBC_auto_Process(Merge_path , save_path):
     window_region_保存 = (1625, 567, 37, 20)
     window_region_输入= (1590, 950, 35, 16)
     # 目标文件夹路径
-    folder_path = r"D:\Ropeway\FTPMerge"
     # 获取目标文件夹中所有文件夹的名字
-    subdirectories = get_subdirectories_with_no_csv_without03(folder_path)
-
-
+    subdirectories = get_subdirectories_with_no_csv_without03(Merge_path)
     for directory in subdirectories:
         exit_for_loop = False  # 标志，用于指示是否退出外部循环
         ensure_no_input_data()
@@ -262,7 +259,7 @@ def TBC_auto_Process():
         time.sleep(1) #等待
         move_and_click_with_shift(2474, 447) #拖动并全选文件名
         time.sleep(1) #等待
-        type_string(f"D:\\Ropeway\\FTPcsv2\\{directory}.csv") # 输入文件夹名字
+        type_string(f"D:\\Ropeway\\{save_path}\\TBC\\{directory}.csv") # 输入文件夹名字
         time.sleep(1) #等待D
         move_and_click(2436, 1511)#输出栏里的保存
         time.sleep(1) #等待
