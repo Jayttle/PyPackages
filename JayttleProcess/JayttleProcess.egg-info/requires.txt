@@ -1,0 +1,13 @@
+pyautogui
+matplotlib
+statsmodels
+scikit-learn
+EMD-signal
+PyWavelets
+pymysql
+numpy
+seaborn
+pandas
+openpyxl
+chardet
+pyproj

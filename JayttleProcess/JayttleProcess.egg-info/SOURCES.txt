@@ -1,3 +1,4 @@
+README.txt
 setup.py
 JayttleProcess/CommonDecorator.py
 JayttleProcess/ComputerControl.py
@@ -13,4 +14,5 @@ JayttleProcess/__init__.py
 JayttleProcess.egg-info/PKG-INFO
 JayttleProcess.egg-info/SOURCES.txt
 JayttleProcess.egg-info/dependency_links.txt
+JayttleProcess.egg-info/requires.txt
 JayttleProcess.egg-info/top_level.txt
