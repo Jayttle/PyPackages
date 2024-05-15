@@ -369,7 +369,3 @@ def Process_in_one_step():
             ComputerControl.TBC_auto_Process(FTPMerge_folder, folder_name)
         base_marker_names.remove(item)
         
-
-def shut_down_tbc():
-    ComputerControl.auto_turn_off_TBC()
-    ComputerControl.auto_turn_off()
