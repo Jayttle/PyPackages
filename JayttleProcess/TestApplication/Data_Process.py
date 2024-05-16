@@ -418,6 +418,16 @@ def load_csv_data(folder_path: str) -> List[DataPoint]:
             data_points.extend(read_csv_to_datapoints(csv_file_path))
     return data_points
 
+def process_data_points(data_points: List[DataPoint], lat: float, lon: float, north_key: str, east_key: str) -> Tuple[List[TimeSeriesData], List[TimeSeriesData], float, float]:
+    """
+    Process data points and convert coordinates.
+    """
+    east, north = TBCProcessCsv.convert_coordinates(lat, lon)
+    time_series_north: List[TimeSeriesData] = [dataPoint_create_timeseries_data(datapoint, north_key) for datapoint in data_points]
+    time_series_east: List[TimeSeriesData] = [dataPoint_create_timeseries_data(datapoint, east_key) for datapoint in data_points]
+    TimeSeriesDataMethod.remove_specific_value(time_series_north, north)
+    TimeSeriesDataMethod.remove_specific_value(time_series_east, east)
+    return time_series_north, time_series_east, east, north
 
 def load_DataPoints():
     """
@@ -425,61 +435,36 @@ def load_DataPoints():
     """
     R031_1619_DataPoints = load_csv_data(r'D:\Ropeway\R031_1619')
     R031_0407_DataPoints = load_csv_data(r'D:\Ropeway\FTPCsv2')
+    R051_1619_DataPoints = load_csv_data(r'D:\Ropeway\R051_1619')
     R081_1619_DataPoints = load_csv_data(r'D:\Ropeway\FTPCsv3')
-    return R031_1619_DataPoints, R031_0407_DataPoints, R081_1619_DataPoints
+    return R031_1619_DataPoints, R031_0407_DataPoints, R051_1619_DataPoints, R081_1619_DataPoints
 
-def load_all_data():
+def load_all_data() -> Tuple[List[Tuple[TimeSeriesData, TimeSeriesData]], List[Tuple[TimeSeriesData, TimeSeriesData]], List[Tuple[TimeSeriesData, TimeSeriesData]], List[Tuple[TimeSeriesData, TimeSeriesData]], Dict[str, Tuple[float, float]]]:
     """
     Load data from multiple CSV files and process them.
     """
-    R031_1619_DataPoints, R031_0407_DataPoints, R081_1619_DataPoints = load_DataPoints()
+    R031_1619_DataPoints, R031_0407_DataPoints, R051_1619_DataPoints, R081_1619_DataPoints = load_DataPoints()
 
     R031_lat, R031_lon = 35.473642676796, 118.054358431073
     R051_lat, R051_lon = 35.473944469154, 118.048584306326
     R071_lat, R071_lon = 35.474177696631, 118.044201562812
     R081_lat, R081_lon = 35.474245973695, 118.042930824340
 
-    R031_east, R031_north = TBCProcessCsv.convert_coordinates(R031_lat, R031_lon)
-    R051_east, R051_north = TBCProcessCsv.convert_coordinates(R051_lat, R051_lon)
-    R071_east, R071_north = TBCProcessCsv.convert_coordinates(R071_lat, R071_lon)
-    R081_east, R081_north = TBCProcessCsv.convert_coordinates(R081_lat, R081_lon)
 
-
-        # 定义四个点的坐标
-    points: dict[str, tuple[float, float]] = {
-        'R031': (R031_east, R031_north),
-        'R051': (R051_east, R051_north),
-        'R071': (R071_east, R071_north),
-        'R081': (R081_east, R081_north)
+    points: Dict[str, Tuple[float, float]] = {
+        'R031_1619': process_data_points(R031_1619_DataPoints, R031_lat, R031_lon, "north_coordinate", "east_coordinate"),
+        'R031_0407': process_data_points(R031_0407_DataPoints, R031_lat, R031_lon, "north_coordinate", "east_coordinate"),
+        'R051_1619': process_data_points(R051_1619_DataPoints, R051_lat, R051_lon, "north_coordinate", "east_coordinate"),
+    #   'R071': process_data_points(R071_1619_DataPoints, 35.474177696631, 118.044201562812, "north_coordinate", "east_coordinate"),
+        'R081_1619': process_data_points(R081_1619_DataPoints, R081_lat, R081_lon, "north_coordinate", "east_coordinate")
     }
 
-    # 调用函数绘制点的位置
-    # plot_points(points)
-     # 定义要提取的属性键
-    north_key = "north_coordinate"
-    # 使用列表推导式创建 TimeSeriesData 对象列表
-    R031_1619_north: list[TimeSeriesData] = [dataPoint_create_timeseries_data(datapoint, north_key) for datapoint in R031_1619_DataPoints]
-    R031_0407_north: list[TimeSeriesData] = [dataPoint_create_timeseries_data(datapoint, north_key) for datapoint in R031_0407_DataPoints]
-    R081_1619_north: list[TimeSeriesData] = [dataPoint_create_timeseries_data(datapoint, north_key) for datapoint in R081_1619_DataPoints]
+    R031_1619_combined: List[Tuple[TimeSeriesData, TimeSeriesData]] = list(zip(points['R031_1619'][0], points['R031_1619'][1]))
+    R031_0407_combined: List[Tuple[TimeSeriesData, TimeSeriesData]] = list(zip(points['R031_0407'][0], points['R031_0407'][1]))
+    R051_1619_combined: List[Tuple[TimeSeriesData, TimeSeriesData]] = list(zip(points['R051_1619'][0], points['R051_1619'][1]))
+    R081_1619_combined: List[Tuple[TimeSeriesData, TimeSeriesData]] = list(zip(points['R081_1619'][0], points['R081_1619'][1]))
 
-     # 定义要提取的属性键
-    east_key = "east_coordinate"
-    # 使用列表推导式创建 TimeSeriesData 对象列表
-    R031_1619_east: list[TimeSeriesData] = [dataPoint_create_timeseries_data(datapoint, east_key) for datapoint in R031_1619_DataPoints]
-    R031_0407_east: list[TimeSeriesData] = [dataPoint_create_timeseries_data(datapoint, east_key) for datapoint in R031_0407_DataPoints]
-    R081_1619_east: list[TimeSeriesData] = [dataPoint_create_timeseries_data(datapoint, east_key) for datapoint in R081_1619_DataPoints]
-    TimeSeriesDataMethod.remove_specific_value(R031_1619_north, R031_north)
-    TimeSeriesDataMethod.remove_specific_value(R031_0407_north, R031_north)
-    TimeSeriesDataMethod.remove_specific_value(R081_1619_north, R081_north)
-    TimeSeriesDataMethod.remove_specific_value(R031_1619_east, R031_east)
-    TimeSeriesDataMethod.remove_specific_value(R031_0407_east, R031_east)
-    TimeSeriesDataMethod.remove_specific_value(R081_1619_east, R081_east)
-
-     # 合并北坐标和东坐标到一个列表中
-    R031_1619_combined:list[tuple[TimeSeriesData,TimeSeriesData]] = zip(R031_1619_north, R031_1619_east)
-    R031_0407_combined:list[tuple[TimeSeriesData,TimeSeriesData]] = zip(R031_0407_north, R031_0407_east)
-    R081_1619_combined:list[tuple[TimeSeriesData,TimeSeriesData]] = zip(R081_1619_north, R081_1619_east)
-    return R031_1619_combined, R031_0407_combined, R081_1619_combined, points
+    return R031_1619_combined, R031_0407_combined, R051_1619_combined, R081_1619_combined, points
 
 
 def calculate_daily_movements(combined_data: Dict[datetime, Tuple[Tuple[TimeSeriesData, TimeSeriesData], Tuple[TimeSeriesData, TimeSeriesData]]]) -> Dict[datetime, Tuple[float, float]]:
@@ -498,20 +483,23 @@ def calculate_daily_movements(combined_data: Dict[datetime, Tuple[Tuple[TimeSeri
 @CommonDecorator.log_function_call
 def main_TODO1():
 
-    R031_1619_DataPoints, R031_0407_DataPoints, R081_1619_DataPoints = load_DataPoints()     
-    R031_1619_combined, R031_0407_combined, R081_1619_combined, points = load_all_data()
+    R031_1619_DataPoints, R031_0407_DataPoints, R051_1619_DataPoints, R081_1619_DataPoints = load_DataPoints()     
+    R031_1619_combined, R031_0407_combined, R051_1619_combined, R081_1619_combined, points = load_all_data()
     R031_1619_combined = list(R031_1619_combined)
     R031_0407_combined = list(R031_0407_combined)
+    R051_1619_combined = list(R051_1619_combined)
     R081_1619_combined = list(R081_1619_combined)
     # 调用函数计算每个点与原点 (0, 0) 的距离和方位角
     R031_1619_distances_and_bearings: List[Tuple[TimeSeriesData,TimeSeriesData]] = calculate_distance_and_bearing(R031_1619_combined)
     R031_0407_distances_and_bearings: List[Tuple[TimeSeriesData,TimeSeriesData]] = calculate_distance_and_bearing(R031_0407_combined)
+    R051_1619_distances_and_bearings: List[Tuple[TimeSeriesData,TimeSeriesData]] = calculate_distance_and_bearing(R051_1619_combined)
     R081_1619_distances_and_bearings: List[Tuple[TimeSeriesData,TimeSeriesData]] = calculate_distance_and_bearing(R081_1619_combined)
+    plot_polar(R051_1619_distances_and_bearings, "R051_1619")
+    rms_list = [point.rms * 1000 for point in R051_1619_DataPoints]
 
-    rms_list = [point.rms * 1000 for point in R031_1619_DataPoints]
-    plot_polar_with_rms(rms_list, R031_1619_distances_and_bearings, 15, 'withRMS')
-    plot_polar_with_rms_exceeded(rms_list, R031_1619_distances_and_bearings, 15, 'withRMS')
-    plot_polar_without_rms_exceeded(rms_list, R031_1619_distances_and_bearings, 15, 'withRMS')
+    plot_polar_with_rms(rms_list, R051_1619_distances_and_bearings, 15, 'withRMS')
+    plot_polar_with_rms_exceeded(rms_list, R051_1619_distances_and_bearings, 15, 'withRMS')
+    plot_polar_without_rms_exceeded(rms_list, R051_1619_distances_and_bearings, 15, 'withRMS')
     
     
     # plot_polar_in_month(R031_1619_distances_and_bearings, "R031_1619")
@@ -583,7 +571,7 @@ def pairwise_difference(data):
     return differences
 
 def main_TODO2():
-    R031_1619_DataPoints, R031_0407_DataPoints, R081_1619_DataPoints = load_DataPoints()
+    R031_1619_DataPoints, R031_0407_DataPoints, R051_1619_DataPoints, R081_1619_DataPoints = load_DataPoints()
     
 
     export_datapoints_to_csv(R031_1619_DataPoints,"temp.csv")
