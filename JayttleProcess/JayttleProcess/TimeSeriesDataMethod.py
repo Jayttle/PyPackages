@@ -3399,9 +3399,6 @@ def normalize_features(features: np.ndarray) -> np.ndarray:
 # for point in data:
 #     point.value -= mean_value
 #     point.value = point.value * 1000
-#TODO:基于累积和-休哈特控制图的趋势项自适应拟合
-#TODO:基于EWMA控制图的趋势项自适应拟合
-
 # target_value = 0  # Set an appropriate target value based on your data context
 # cusum_pos, cusum_neg = calculate_cusum(data, target_value)
 # plot_cusum_pos_and_neg(cusum_pos, cusum_neg)

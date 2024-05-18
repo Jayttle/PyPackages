@@ -436,35 +436,44 @@ def load_DataPoints():
     R031_1619_DataPoints = load_csv_data(r'D:\Ropeway\R031_1619')
     R031_0407_DataPoints = load_csv_data(r'D:\Ropeway\FTPCsv2')
     R051_1619_DataPoints = load_csv_data(r'D:\Ropeway\R051_1619')
+    R052_1619_DataPoints = load_csv_data(r'D:\Ropeway\R052_1619')
     R081_1619_DataPoints = load_csv_data(r'D:\Ropeway\FTPCsv3')
-    return R031_1619_DataPoints, R031_0407_DataPoints, R051_1619_DataPoints, R081_1619_DataPoints
+    R082_1619_DataPoints = load_csv_data(r'D:\Ropeway\R082_1619')
+    return R031_1619_DataPoints, R031_0407_DataPoints, R051_1619_DataPoints, R052_1619_DataPoints, R081_1619_DataPoints, R082_1619_DataPoints
 
 def load_all_data() -> Tuple[List[Tuple[TimeSeriesData, TimeSeriesData]], List[Tuple[TimeSeriesData, TimeSeriesData]], List[Tuple[TimeSeriesData, TimeSeriesData]], List[Tuple[TimeSeriesData, TimeSeriesData]], Dict[str, Tuple[float, float]]]:
     """
     Load data from multiple CSV files and process them.
     """
-    R031_1619_DataPoints, R031_0407_DataPoints, R051_1619_DataPoints, R081_1619_DataPoints = load_DataPoints()
+    R031_1619_DataPoints, R031_0407_DataPoints, R051_1619_DataPoints, R052_1619_DataPoints, R081_1619_DataPoints, R082_1619_DataPoints = load_DataPoints()
 
     R031_lat, R031_lon = 35.473642676796, 118.054358431073
+    R032_lat, R032_lon = 35.473666223407, 118.054360237421
     R051_lat, R051_lon = 35.473944469154, 118.048584306326
+    R052_lat, R052_lon = 35.473974942138, 118.048586858521
     R071_lat, R071_lon = 35.474177696631, 118.044201562812
+    R072_lat, R072_lon = 35.474204534806, 118.044203691212
     R081_lat, R081_lon = 35.474245973695, 118.042930824340
+    R082_lat, R082_lon = 35.474269576552, 118.042932741649
 
 
     points: Dict[str, Tuple[float, float]] = {
         'R031_1619': process_data_points(R031_1619_DataPoints, R031_lat, R031_lon, "north_coordinate", "east_coordinate"),
         'R031_0407': process_data_points(R031_0407_DataPoints, R031_lat, R031_lon, "north_coordinate", "east_coordinate"),
         'R051_1619': process_data_points(R051_1619_DataPoints, R051_lat, R051_lon, "north_coordinate", "east_coordinate"),
-    #   'R071': process_data_points(R071_1619_DataPoints, 35.474177696631, 118.044201562812, "north_coordinate", "east_coordinate"),
-        'R081_1619': process_data_points(R081_1619_DataPoints, R081_lat, R081_lon, "north_coordinate", "east_coordinate")
+        'R052_1619': process_data_points(R052_1619_DataPoints, R052_lat, R052_lon, "north_coordinate", "east_coordinate"),
+        'R081_1619': process_data_points(R081_1619_DataPoints, R081_lat, R081_lon, "north_coordinate", "east_coordinate"),
+        'R082_1619': process_data_points(R082_1619_DataPoints, R082_lat, R082_lon, "north_coordinate", "east_coordinate"),
     }
 
     R031_1619_combined: List[Tuple[TimeSeriesData, TimeSeriesData]] = list(zip(points['R031_1619'][0], points['R031_1619'][1]))
     R031_0407_combined: List[Tuple[TimeSeriesData, TimeSeriesData]] = list(zip(points['R031_0407'][0], points['R031_0407'][1]))
     R051_1619_combined: List[Tuple[TimeSeriesData, TimeSeriesData]] = list(zip(points['R051_1619'][0], points['R051_1619'][1]))
+    R052_1619_combined: List[Tuple[TimeSeriesData, TimeSeriesData]] = list(zip(points['R052_1619'][0], points['R052_1619'][1]))
     R081_1619_combined: List[Tuple[TimeSeriesData, TimeSeriesData]] = list(zip(points['R081_1619'][0], points['R081_1619'][1]))
+    R082_1619_combined: List[Tuple[TimeSeriesData, TimeSeriesData]] = list(zip(points['R082_1619'][0], points['R082_1619'][1]))
 
-    return R031_1619_combined, R031_0407_combined, R051_1619_combined, R081_1619_combined, points
+    return R031_1619_combined, R031_0407_combined, R051_1619_combined, R052_1619_combined, R081_1619_combined, R082_1619_combined, points
 
 
 def calculate_daily_movements(combined_data: Dict[datetime, Tuple[Tuple[TimeSeriesData, TimeSeriesData], Tuple[TimeSeriesData, TimeSeriesData]]]) -> Dict[datetime, Tuple[float, float]]:
@@ -483,8 +492,8 @@ def calculate_daily_movements(combined_data: Dict[datetime, Tuple[Tuple[TimeSeri
 @CommonDecorator.log_function_call
 def main_TODO1():
 
-    R031_1619_DataPoints, R031_0407_DataPoints, R051_1619_DataPoints, R081_1619_DataPoints = load_DataPoints()     
-    R031_1619_combined, R031_0407_combined, R051_1619_combined, R081_1619_combined, points = load_all_data()
+    R031_1619_DataPoints, R031_0407_DataPoints, R051_1619_DataPoints, R052_1619_DataPoints, R081_1619_DataPoints, R082_1619_DataPoints = load_DataPoints()     
+    R031_1619_combined, R031_0407_combined, R051_1619_combined, R052_1619_combined, R081_1619_combined, R082_1619_combined, points = load_all_data()
     R031_1619_combined = list(R031_1619_combined)
     R031_0407_combined = list(R031_0407_combined)
     R051_1619_combined = list(R051_1619_combined)
@@ -493,13 +502,18 @@ def main_TODO1():
     R031_1619_distances_and_bearings: List[Tuple[TimeSeriesData,TimeSeriesData]] = calculate_distance_and_bearing(R031_1619_combined)
     R031_0407_distances_and_bearings: List[Tuple[TimeSeriesData,TimeSeriesData]] = calculate_distance_and_bearing(R031_0407_combined)
     R051_1619_distances_and_bearings: List[Tuple[TimeSeriesData,TimeSeriesData]] = calculate_distance_and_bearing(R051_1619_combined)
+    R052_1619_distances_and_bearings: List[Tuple[TimeSeriesData,TimeSeriesData]] = calculate_distance_and_bearing(R052_1619_combined)
     R081_1619_distances_and_bearings: List[Tuple[TimeSeriesData,TimeSeriesData]] = calculate_distance_and_bearing(R081_1619_combined)
-    plot_polar(R051_1619_distances_and_bearings, "R051_1619")
-    rms_list = [point.rms * 1000 for point in R051_1619_DataPoints]
+    R082_1619_distances_and_bearings: List[Tuple[TimeSeriesData,TimeSeriesData]] = calculate_distance_and_bearing(R082_1619_combined)
 
-    plot_polar_with_rms(rms_list, R051_1619_distances_and_bearings, 15, 'withRMS')
-    plot_polar_with_rms_exceeded(rms_list, R051_1619_distances_and_bearings, 15, 'withRMS')
-    plot_polar_without_rms_exceeded(rms_list, R051_1619_distances_and_bearings, 15, 'withRMS')
+     # plot_polar(R082_1619_DataPoints, "R031_1619")
+    rms_list = [point.rms * 1000 for point in R031_1619_DataPoints]
+    rms_list2 = [point.rms * 1000 for point in R031_0407_DataPoints]
+
+    plot_polar_with_rms(rms_list, R031_1619_distances_and_bearings, 10, 'R031_1619 withRMS')
+    plot_polar_with_rms_exceeded(rms_list, R031_1619_distances_and_bearings, 10, 'R031_1619 withRMS')
+    plot_polar_without_rms_exceeded(rms_list, R031_1619_distances_and_bearings, 10, 'R031_1619 withRMS')
+    plot_polar_without_rms_exceeded(rms_list2, R031_0407_distances_and_bearings, 10, 'R031_0407 withRMS')
     
     
     # plot_polar_in_month(R031_1619_distances_and_bearings, "R031_1619")
@@ -508,7 +522,7 @@ def main_TODO1():
     # 调用 calculate_polar_coordinates 函数计算极坐标距离和方位角
     polar_coordinates = calculate_polar_coordinates(points)
     # 绘制极坐标图
-    # plot_polar_in_float(polar_coordinates, title="R051, R071, R081")
+    plot_polar_in_float(polar_coordinates, title="R051, R071, R081")
 
     # plot_polar_compare([R031_1619_distances_and_bearings, R031_0407_distances_and_bearings]) 
 
@@ -571,7 +585,7 @@ def pairwise_difference(data):
     return differences
 
 def main_TODO2():
-    R031_1619_DataPoints, R031_0407_DataPoints, R051_1619_DataPoints, R081_1619_DataPoints = load_DataPoints()
+    R031_1619_DataPoints, R031_0407_DataPoints, R051_1619_DataPoints, R052_1619_DataPoints, R081_1619_DataPoints, R082_1619_DataPoints = load_DataPoints()
     
 
     export_datapoints_to_csv(R031_1619_DataPoints,"temp.csv")
