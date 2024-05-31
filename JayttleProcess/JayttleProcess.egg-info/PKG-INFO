@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: JayttleProcess
-Version: 0.3.3
+Version: 0.3.4
 Summary: modifty time:2024-05-10 
 Home-page: https://github.com/Jayttle/PyPackages.git
 Author: Jayttle
@@ -18,3 +18,5 @@ Requires-Dist: pandas
 Requires-Dist: openpyxl
 Requires-Dist: chardet
 Requires-Dist: pyproj
+Requires-Dist: beautifulsoup4
+Requires-Dist: selenium

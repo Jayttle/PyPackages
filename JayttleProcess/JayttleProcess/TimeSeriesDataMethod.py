@@ -12,6 +12,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import statsmodels.api as sm
+from collections import defaultdict
 from statsmodels.tsa.arima.model import ARIMA
 from statsmodels.tsa.ar_model import AutoReg
 from statsmodels.stats.diagnostic import acorr_ljungbox
@@ -53,9 +54,13 @@ class TimeSeriesData:
             self.datetime = datetime_input
         elif isinstance(datetime_input, str):
             # Parse the datetime string
-            self.datetime = datetime.strptime(datetime_input, "%Y-%m-%d %H:%M:%S.%f")
+            try:
+                self.datetime = datetime.strptime(datetime_input, "%Y-%m-%d %H:%M:%S.%f")
+            except ValueError:
+                # If parsing with microseconds fails, try parsing without microseconds
+                self.datetime = datetime.strptime(datetime_input, "%Y-%m-%d %H:%M:%S")
         else:
-            raise TypeError("datetime_input must be a datetime object or a datetime string in the format '%Y-%m-%d %H:%M:%S.%f'")
+            raise TypeError("datetime_input must be a datetime object or a datetime string in the format '%Y-%m-%d %H:%M:%S' or '%Y-%m-%d %H:%M:%S.%f'")
 
     def __str__(self):
         return f"Value: {self.value}, Datetime: {self.datetime}"
@@ -95,16 +100,16 @@ def create_time_series_data(values: List[float], datetimes: List[str]) -> list[T
     return time_series_data
 
 
-def remove_average(TimeSeriesData: list[TimeSeriesData]) -> None:
+def remove_average(data: list[TimeSeriesData]) -> None:
     """对时序数据进行去平均 再乘以1000"""
-    mean_value = np.mean([point.value for point in TimeSeriesData])
-    remove_specific_value(TimeSeriesData, mean_value)
+    mean_value = np.mean([point.value for point in data])
+    remove_specific_value(data, mean_value)
 
 
-def remove_specific_value(TimeSeriesData: List[TimeSeriesData], specific_value: float) -> None:
+def remove_specific_value(data: List[TimeSeriesData], specific_value: float) -> None:
     """对时序数据进行减去特定值 再乘以1000"""
     # 减去平均值并乘以1000
-    for point in TimeSeriesData:
+    for point in data:
         point.value = (point.value - specific_value) * 1000
     
 
@@ -130,6 +135,127 @@ def plot_TimeSeriesData(TimeSeriesData: list[TimeSeriesData], isShow: bool = Fal
     plt.tight_layout()  # 自动调整子图间的间距和标签位置
 
     plt.plot(datetimes, values)
+
+    if SaveFilePath is not None:
+        plt.savefig(SaveFilePath)
+    elif isShow:
+        plt.show()
+    plt.close()
+
+
+def plot_TimeSeriesData_in_threshold(TimeSeriesData: list[TimeSeriesData], threshold: timedelta, isShow: bool = False, SaveFilePath: Optional[str] = None) -> None:
+    """绘制TimeSeriesData对象的时间序列图"""
+    values = [data.value for data in TimeSeriesData]
+    datetimes = [data.datetime for data in TimeSeriesData]
+
+    # 修改标签和标题的文本为中文
+    plt.figure(figsize=(14.4, 9.6)) # 单位是英寸
+    plt.xlabel('日期')
+    plt.ylabel('数值')
+    plt.title('时间序列数据')
+
+    # 设置日期格式化器和日期刻度定位器
+    date_fmt = mdates.DateFormatter("%m-%d")  # 仅显示月-日
+    date_locator = mdates.AutoDateLocator()  # 自动选择刻度间隔
+    plt.gca().xaxis.set_major_formatter(date_fmt)
+    plt.gca().xaxis.set_major_locator(date_locator)
+    
+    # 设置最大显示的刻度数
+    plt.gcf().autofmt_xdate()  # 旋转日期标签以避免重叠
+    plt.tight_layout()  # 自动调整子图间的间距和标签位置
+
+    # 绘制折线图，根据阈值连接或不连接线段
+    prev_datetime = None
+    prev_value = None
+    for datetime, value in zip(datetimes, values):
+        if prev_datetime is not None:
+            time_diff = datetime - prev_datetime
+            if time_diff < threshold:  # 如果时间间隔小于阈值，则连接线段
+                plt.plot([prev_datetime, datetime], [prev_value, value], linestyle='-', color='blue')
+            else:  # 否则不连接线段
+                plt.plot([prev_datetime, datetime], [prev_value, value], linestyle='', color='blue')
+        prev_datetime = datetime
+        prev_value = value
+
+    if SaveFilePath is not None:
+        plt.savefig(SaveFilePath)
+    elif isShow:
+        plt.show()
+    plt.close()
+
+
+def plot_data_with_datetimes(value: List[float], datetimes:List[datetime], color='blue'):
+    # 绘制折线图，根据阈值连接或不连接线段，并使用不同颜色
+    prev_datetime = None
+    prev_value = None
+    prev_month = None
+    for datetime, value in zip(datetimes, value):
+        month = datetime.month
+        if prev_datetime is not None:
+            time_diff = datetime - prev_datetime
+            if time_diff < timedelta(days=2):  # 如果时间间隔小于阈值，则连接线段
+                plt.plot([prev_datetime, datetime], [prev_value, value], linestyle='-', color=color)
+            else:  # 否则不连接线段
+                plt.plot([prev_datetime, datetime], [prev_value, value], linestyle='', color=color)
+        prev_datetime = datetime
+        prev_value = value
+        prev_month = month
+    # 显示图形
+    plt.show()
+
+
+def plot_TimeSeriesData_in_season(TimeSeriesData: list[TimeSeriesData], threshold: timedelta, isShow: bool = False, SaveFilePath: Optional[str] = None) -> None:
+    """绘制TimeSeriesData对象的时间序列图，根据月份使用不同颜色标识"""
+    values = [data.value for data in TimeSeriesData]
+    datetimes = [data.datetime for data in TimeSeriesData]
+
+    # 设置颜色映射
+    color_map = {1: (242, 204, 142),   # 1、2、3月份
+                 2: (242, 204, 142),
+                 3: (242, 204, 142),
+                 4: (223, 122, 94),    # 4、5、6月份
+                 5: (223, 122, 94),
+                 6: (223, 122, 94),
+                 7: (60, 64, 91),      # 7、8、9月份
+                 8: (60, 64, 91),
+                 9: (60, 64, 91),
+                 10: (130, 178, 154),  # 10、11、12月份
+                 11: (130, 178, 154),
+                 12: (130, 178, 154)}
+
+    # 修改标签和标题的文本为中文
+    plt.figure(figsize=(14.4, 9.6)) # 单位是英寸
+    plt.xlabel('日期')
+    plt.ylabel('数值')
+    plt.title('时间序列数据')
+
+    # 设置日期格式化器和日期刻度定位器
+    date_fmt = mdates.DateFormatter("%m-%d")  # 仅显示月-日
+    date_locator = mdates.AutoDateLocator()  # 自动选择刻度间隔
+    plt.gca().xaxis.set_major_formatter(date_fmt)
+    plt.gca().xaxis.set_major_locator(date_locator)
+    
+    # 设置最大显示的刻度数
+    plt.gcf().autofmt_xdate()  # 旋转日期标签以避免重叠
+    plt.tight_layout()  # 自动调整子图间的间距和标签位置
+
+    # 绘制折线图，根据阈值连接或不连接线段，并使用不同颜色
+    prev_datetime = None
+    prev_value = None
+    prev_month = None
+    for datetime, value in zip(datetimes, values):
+        month = datetime.month
+        if prev_datetime is not None:
+            time_diff = datetime - prev_datetime
+            if time_diff < threshold:  # 如果时间间隔小于阈值，则连接线段
+                color = tuple(c/255 for c in color_map[month])  # 将RGB转换为范围在0到1之间的值
+                plt.plot([prev_datetime, datetime], [prev_value, value], linestyle='-', color=color)
+            else:  # 否则不连接线段
+                color = tuple(c/255 for c in color_map[prev_month])  # 将RGB转换为范围在0到1之间的值
+                plt.plot([prev_datetime, datetime], [prev_value, value], linestyle='', color=color)
+        prev_datetime = datetime
+        prev_value = value
+        prev_month = month
 
     if SaveFilePath is not None:
         plt.savefig(SaveFilePath)
@@ -330,6 +456,20 @@ def calculate_r_squared(y_true: np.ndarray, y_pred: np.ndarray) -> float:
     residual_sum_squares = np.sum((y_true - y_pred) ** 2)
     r_squared = 1 - (residual_sum_squares / total_sum_squares)
     return r_squared
+
+
+def calculate_distance(x1, y1, x2, y2):
+    distance = math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
+    return distance
+
+def calculate_bearing(x, y):
+    # 计算角度（弧度）
+    angle_radians = math.atan2(y, x)
+    # 将弧度转换为角度
+    angle_degrees = math.degrees(angle_radians)
+    # 确保角度在 [0, 360) 范围内
+    bearing = (angle_degrees + 360) % 360
+    return bearing
 
 
 def calculate_durbin_watson(residuals: np.ndarray) -> float:
@@ -2881,6 +3021,107 @@ def plot_ACF(TimeSeriesData: list[TimeSeriesData], SaveFilePath: Optional[str] =
     plt.close()
 
 
+# 定义一个函数来绘制极坐标图
+def plot_polar(distances_and_bearings: List[Tuple[float, float]], title = None):
+    # 创建一个极坐标图
+    fig, ax = plt.subplots(subplot_kw={'projection': 'polar'})
+    
+    # 遍历距离和方位角，绘制每个点
+    for distance, bearing in distances_and_bearings:
+        # 将方位角转换为弧度
+        theta = np.deg2rad(bearing)
+        # 绘制点
+        ax.plot(theta, distance, 'o', color='blue')
+    
+    # 设置极坐标图的标题
+    ax.set_title(f'{title}极坐标')
+    
+    # 显示图形
+    plt.show()
+
+def plot_polar_with_rms(rms_list: List[float], distances_and_bearings: List[Tuple[float, float]], threshold: float, title=None):
+    # 创建一个极坐标图
+    fig, ax = plt.subplots(subplot_kw={'projection': 'polar'})
+    
+    # 遍历距离、方位角和 RMS 值，绘制每个点
+    for i, (distance, bearing) in enumerate(distances_and_bearings):
+        # 将方位角转换为弧度
+        theta = np.deg2rad(bearing)
+        
+        # 绘制点
+        if rms_list[i] > threshold:
+            ax.plot(theta, distance, 'o', color='red', label='RMS Exceeded Threshold')
+        else:
+            ax.plot(theta, distance, 'o', color='blue')
+    
+    # 设置极坐标图的标题
+    ax.set_title(f'{title}极坐标')
+    
+    
+    # 显示图形
+    plt.show()
+
+def plot_polar_with_rms_exceeded(rms_list: List[float], distances_and_bearings: List[Tuple[TimeSeriesData, TimeSeriesData]], threshold: float, title=None):
+    # 创建一个极坐标图
+    fig, ax = plt.subplots(subplot_kw={'projection': 'polar'})
+    
+    # 遍历距离、方位角和 RMS 值，仅绘制超过阈值的点
+    for i, (distance, bearing) in enumerate(distances_and_bearings):
+        # 将方位角转换为弧度
+        theta = np.deg2rad(bearing.value)
+        
+        # 绘制超过阈值的点
+        if rms_list[i] > threshold:
+            ax.plot(theta, distance.value, 'o', color='blue', label='RMS Exceeded Threshold')
+    
+    # 设置极坐标图的标题
+    ax.set_title(f'{title}极坐标 (只显示超过阈值的点)')
+
+    # 显示图形
+    plt.show()
+
+
+def plot_polar_in_month(distances_and_bearings: List[Tuple[TimeSeriesData, TimeSeriesData]], title = None):
+    # 创建一个极坐标图
+    fig, ax = plt.subplots(subplot_kw={'projection': 'polar'})
+    
+    # 定义一个默认颜色
+    default_color = 'k'
+    
+    # 创建一个颜色映射，将月份映射到颜色
+    month_to_color = defaultdict(lambda: default_color)
+    month_to_color.update({
+        1: 'b', 2: 'b', 3: 'b',  # January, February, March: blue
+        4: 'r', 5: 'r', 6: 'r',  # April, May, June: red
+        7: 'g', 8: 'g', 9: 'g',  # July, August, September: green
+        10: 'orange', 11: 'orange', 12: 'orange',  # October, November, December: yellow
+    })
+
+    # 遍历距离和方位角，绘制每个点
+    for distance, bearing in distances_and_bearings:
+        # 将方位角转换为弧度
+        theta = np.deg2rad(bearing.value)
+        # 获取月份
+        month = distance.datetime.month
+        color = month_to_color[month]
+        # 绘制点
+        ax.plot(theta, distance.value, 'o', color=color, label=f'Month {month}')
+
+    # 添加假线条以创建图例
+    for month, color in month_to_color.items():
+        ax.plot([], [], 'o', color=color, label=f'Month {month}')
+
+    # 绘制 bearing 角度为 176.91600324062733 的直线
+    bearing_line_theta = np.deg2rad(176.91600324062733)
+    ax.plot([bearing_line_theta, bearing_line_theta], [0, ax.get_ylim()[1]], color='k', linestyle='--', label='Bearing Line')
+    
+    # 设置极坐标图的标题
+    ax.set_title(f'{title}极坐标')
+    
+    
+    # 显示图形
+    plt.show()
+    
 def plot_PACF(TimeSeriesData: list[TimeSeriesData], lags: int = 48, SaveFilePath: Optional[str] = None) -> None:
     """绘制偏自相关函数(PACF)图表"""
     # 提取时序数据的观测值
@@ -3399,9 +3640,6 @@ def normalize_features(features: np.ndarray) -> np.ndarray:
 # for point in data:
 #     point.value -= mean_value
 #     point.value = point.value * 1000
-#TODO:基于累积和-休哈特控制图的趋势项自适应拟合
-#TODO:基于EWMA控制图的趋势项自适应拟合
-
 # target_value = 0  # Set an appropriate target value based on your data context
 # cusum_pos, cusum_neg = calculate_cusum(data, target_value)
 # plot_cusum_pos_and_neg(cusum_pos, cusum_neg)

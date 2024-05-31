@@ -894,8 +894,6 @@ def process_rnx_files(folder_path: str) -> None:
             except Exception as e:
                 print(f"An exception occurred: {e}")
 
-#TODO: 实现toDownload与实际下载与解压后的文件还差哪些
-
 def count_lines_in_each_txt_file(folder_path: str) -> dict[str, int]:
     file_lines_mapping = {}
     for root, dirs, files in os.walk(folder_path):

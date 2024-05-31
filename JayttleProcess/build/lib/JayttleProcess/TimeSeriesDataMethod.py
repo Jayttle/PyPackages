@@ -53,9 +53,13 @@ class TimeSeriesData:
             self.datetime = datetime_input
         elif isinstance(datetime_input, str):
             # Parse the datetime string
-            self.datetime = datetime.strptime(datetime_input, "%Y-%m-%d %H:%M:%S.%f")
+            try:
+                self.datetime = datetime.strptime(datetime_input, "%Y-%m-%d %H:%M:%S.%f")
+            except ValueError:
+                # If parsing with microseconds fails, try parsing without microseconds
+                self.datetime = datetime.strptime(datetime_input, "%Y-%m-%d %H:%M:%S")
         else:
-            raise TypeError("datetime_input must be a datetime object or a datetime string in the format '%Y-%m-%d %H:%M:%S.%f'")
+            raise TypeError("datetime_input must be a datetime object or a datetime string in the format '%Y-%m-%d %H:%M:%S' or '%Y-%m-%d %H:%M:%S.%f'")
 
     def __str__(self):
         return f"Value: {self.value}, Datetime: {self.datetime}"
@@ -95,16 +99,16 @@ def create_time_series_data(values: List[float], datetimes: List[str]) -> list[T
     return time_series_data
 
 
-def remove_average(TimeSeriesData: list[TimeSeriesData]) -> None:
+def remove_average(data: list[TimeSeriesData]) -> None:
     """对时序数据进行去平均 再乘以1000"""
-    mean_value = np.mean([point.value for point in TimeSeriesData])
-    remove_specific_value(TimeSeriesData, mean_value)
+    mean_value = np.mean([point.value for point in data])
+    remove_specific_value(data, mean_value)
 
 
-def remove_specific_value(TimeSeriesData: List[TimeSeriesData], specific_value: float) -> None:
+def remove_specific_value(data: List[TimeSeriesData], specific_value: float) -> None:
     """对时序数据进行减去特定值 再乘以1000"""
     # 减去平均值并乘以1000
-    for point in TimeSeriesData:
+    for point in data:
         point.value = (point.value - specific_value) * 1000
     
 
@@ -130,6 +134,127 @@ def plot_TimeSeriesData(TimeSeriesData: list[TimeSeriesData], isShow: bool = Fal
     plt.tight_layout()  # 自动调整子图间的间距和标签位置
 
     plt.plot(datetimes, values)
+
+    if SaveFilePath is not None:
+        plt.savefig(SaveFilePath)
+    elif isShow:
+        plt.show()
+    plt.close()
+
+
+def plot_TimeSeriesData_in_threshold(TimeSeriesData: list[TimeSeriesData], threshold: timedelta, isShow: bool = False, SaveFilePath: Optional[str] = None) -> None:
+    """绘制TimeSeriesData对象的时间序列图"""
+    values = [data.value for data in TimeSeriesData]
+    datetimes = [data.datetime for data in TimeSeriesData]
+
+    # 修改标签和标题的文本为中文
+    plt.figure(figsize=(14.4, 9.6)) # 单位是英寸
+    plt.xlabel('日期')
+    plt.ylabel('数值')
+    plt.title('时间序列数据')
+
+    # 设置日期格式化器和日期刻度定位器
+    date_fmt = mdates.DateFormatter("%m-%d")  # 仅显示月-日
+    date_locator = mdates.AutoDateLocator()  # 自动选择刻度间隔
+    plt.gca().xaxis.set_major_formatter(date_fmt)
+    plt.gca().xaxis.set_major_locator(date_locator)
+    
+    # 设置最大显示的刻度数
+    plt.gcf().autofmt_xdate()  # 旋转日期标签以避免重叠
+    plt.tight_layout()  # 自动调整子图间的间距和标签位置
+
+    # 绘制折线图，根据阈值连接或不连接线段
+    prev_datetime = None
+    prev_value = None
+    for datetime, value in zip(datetimes, values):
+        if prev_datetime is not None:
+            time_diff = datetime - prev_datetime
+            if time_diff < threshold:  # 如果时间间隔小于阈值，则连接线段
+                plt.plot([prev_datetime, datetime], [prev_value, value], linestyle='-', color='blue')
+            else:  # 否则不连接线段
+                plt.plot([prev_datetime, datetime], [prev_value, value], linestyle='', color='blue')
+        prev_datetime = datetime
+        prev_value = value
+
+    if SaveFilePath is not None:
+        plt.savefig(SaveFilePath)
+    elif isShow:
+        plt.show()
+    plt.close()
+
+
+def plot_data_with_datetimes(value: List[float], datetimes:List[datetime], color='blue'):
+    # 绘制折线图，根据阈值连接或不连接线段，并使用不同颜色
+    prev_datetime = None
+    prev_value = None
+    prev_month = None
+    for datetime, value in zip(datetimes, value):
+        month = datetime.month
+        if prev_datetime is not None:
+            time_diff = datetime - prev_datetime
+            if time_diff < timedelta(days=2):  # 如果时间间隔小于阈值，则连接线段
+                plt.plot([prev_datetime, datetime], [prev_value, value], linestyle='-', color=color)
+            else:  # 否则不连接线段
+                plt.plot([prev_datetime, datetime], [prev_value, value], linestyle='', color=color)
+        prev_datetime = datetime
+        prev_value = value
+        prev_month = month
+    # 显示图形
+    plt.show()
+
+
+def plot_TimeSeriesData_in_season(TimeSeriesData: list[TimeSeriesData], threshold: timedelta, isShow: bool = False, SaveFilePath: Optional[str] = None) -> None:
+    """绘制TimeSeriesData对象的时间序列图，根据月份使用不同颜色标识"""
+    values = [data.value for data in TimeSeriesData]
+    datetimes = [data.datetime for data in TimeSeriesData]
+
+    # 设置颜色映射
+    color_map = {1: (242, 204, 142),   # 1、2、3月份
+                 2: (242, 204, 142),
+                 3: (242, 204, 142),
+                 4: (223, 122, 94),    # 4、5、6月份
+                 5: (223, 122, 94),
+                 6: (223, 122, 94),
+                 7: (60, 64, 91),      # 7、8、9月份
+                 8: (60, 64, 91),
+                 9: (60, 64, 91),
+                 10: (130, 178, 154),  # 10、11、12月份
+                 11: (130, 178, 154),
+                 12: (130, 178, 154)}
+
+    # 修改标签和标题的文本为中文
+    plt.figure(figsize=(14.4, 9.6)) # 单位是英寸
+    plt.xlabel('日期')
+    plt.ylabel('数值')
+    plt.title('时间序列数据')
+
+    # 设置日期格式化器和日期刻度定位器
+    date_fmt = mdates.DateFormatter("%m-%d")  # 仅显示月-日
+    date_locator = mdates.AutoDateLocator()  # 自动选择刻度间隔
+    plt.gca().xaxis.set_major_formatter(date_fmt)
+    plt.gca().xaxis.set_major_locator(date_locator)
+    
+    # 设置最大显示的刻度数
+    plt.gcf().autofmt_xdate()  # 旋转日期标签以避免重叠
+    plt.tight_layout()  # 自动调整子图间的间距和标签位置
+
+    # 绘制折线图，根据阈值连接或不连接线段，并使用不同颜色
+    prev_datetime = None
+    prev_value = None
+    prev_month = None
+    for datetime, value in zip(datetimes, values):
+        month = datetime.month
+        if prev_datetime is not None:
+            time_diff = datetime - prev_datetime
+            if time_diff < threshold:  # 如果时间间隔小于阈值，则连接线段
+                color = tuple(c/255 for c in color_map[month])  # 将RGB转换为范围在0到1之间的值
+                plt.plot([prev_datetime, datetime], [prev_value, value], linestyle='-', color=color)
+            else:  # 否则不连接线段
+                color = tuple(c/255 for c in color_map[prev_month])  # 将RGB转换为范围在0到1之间的值
+                plt.plot([prev_datetime, datetime], [prev_value, value], linestyle='', color=color)
+        prev_datetime = datetime
+        prev_value = value
+        prev_month = month
 
     if SaveFilePath is not None:
         plt.savefig(SaveFilePath)
@@ -3399,9 +3524,6 @@ def normalize_features(features: np.ndarray) -> np.ndarray:
 # for point in data:
 #     point.value -= mean_value
 #     point.value = point.value * 1000
-#TODO:基于累积和-休哈特控制图的趋势项自适应拟合
-#TODO:基于EWMA控制图的趋势项自适应拟合
-
 # target_value = 0  # Set an appropriate target value based on your data context
 # cusum_pos, cusum_neg = calculate_cusum(data, target_value)
 # plot_cusum_pos_and_neg(cusum_pos, cusum_neg)

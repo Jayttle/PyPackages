@@ -338,13 +338,14 @@ def Process_Check(toDownload_path, local_save_path):
 @ComD.log_function_call
 def Process_in_one_step():
     base_marker_names = ['B011', 'B021']
-    root_folder = f"D:\Ropeway" # 存储软件运行的根目录
-    to_process_marker_names = ['R052', 'R071']
-#    to_process_marker_names = ['R031', 'R032', 'R051', 'R052', 'R071', 'R072', 'R081', 'R082']
+    root_folder = r"H:\xjt_proj\Ropeway"
+    # to_process_marker_names = ['R052', 'R071']
+    to_process_marker_names = ['R032', 'R051', 'R052', 'R071', 'R072', 'R081', 'R082']
     # 指定时间范围
-    start_hour= 16
-    end_hour = 19
+    start_hour= 4
+    end_hour = 7
     TBC_Process = False
+    isFirstProcess = True
     for item in to_process_marker_names:
         folder_name = f"{item}_{start_hour}{end_hour}"
         folder_path = os.path.join(root_folder, folder_name)
@@ -359,16 +360,16 @@ def Process_in_one_step():
         os.makedirs(TBC_folder, exist_ok=True)
         base_marker_names.append(item)
         Process_Part1(toDownload_folder, base_marker_names, start_hour, end_hour)
-        Process_Copy(False, toDownload_folder ,FTPMerge_folder)
+        Process_Copy(isFirstProcess, toDownload_folder ,FTPMerge_folder)
 
-        # Process_Part2(toDownload_folder, FTP_folder)
-        # Process_Part3(FTP_folder)
-        # Process_Part4(FTP_folder, FTPMerge_folder)
-        # Process_Check(toDownload_folder, FTP_folder)
+        Process_Part2(toDownload_folder, FTP_folder)
+        Process_Part3(FTP_folder)
+        Process_Part4(FTP_folder, FTPMerge_folder)
+        Process_Check(toDownload_folder, FTP_folder)
         if TBC_Process:
             ComputerControl.TBC_auto_Process(FTPMerge_folder, folder_name)
         base_marker_names.remove(item)
-        
+        isFirstProcess = False
 
 def shut_down_tbc():
     ComputerControl.auto_turn_off_TBC()

@@ -848,11 +848,15 @@ def process_file(file_path: str, file_name: str) -> None:
     """
     # 获取文件名的前四个字符
     first_four_chars = file_name[:4]
-    # 读取文件的内容
+    
+    # 逐行读取文件的内容，只读取前四行
     with open(file_path, 'r') as file:
-        lines = file.readlines()
+        lines = []
+        for _ in range(4):
+            lines.append(file.readline())
+    
     # 检查前四行数据是否有以 "MARKER NAME" 结尾的行，并且将该行的前四个字符与文件名的前四个字符进行匹配
-    for i, line in enumerate(lines[:4]):
+    for i, line in enumerate(lines):
         if line.strip().endswith("MARKER NAME"):
             if line[:4] != first_four_chars:
                 # 修改第四行数据的前四个字符为文件名的前四个字符
@@ -893,8 +897,6 @@ def process_rnx_files(folder_path: str) -> None:
                 future.result()
             except Exception as e:
                 print(f"An exception occurred: {e}")
-
-#TODO: 实现toDownload与实际下载与解压后的文件还差哪些
 
 def count_lines_in_each_txt_file(folder_path: str) -> dict[str, int]:
     file_lines_mapping = {}

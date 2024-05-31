@@ -10,6 +10,7 @@ JayttleProcess/RinexCommonManage.py
 JayttleProcess/SQLCommonUse.py
 JayttleProcess/TBCProcessCsv.py
 JayttleProcess/TimeSeriesDataMethod.py
+JayttleProcess/WebsiteCrawler.py
 JayttleProcess/__init__.py
 JayttleProcess.egg-info/PKG-INFO
 JayttleProcess.egg-info/SOURCES.txt

@@ -16,8 +16,8 @@ from tqdm import tqdm
 from paddlenlp import Taskflow
 
 
-sns.set_theme(style="ticks")
-font = "/usr/share/fonts/winfont/simsun.ttc"
-fp = fm.FontProperties(fname=font)
-plt.rcParams["axes.unicode_minus"] = False
+# sns.set_theme(style="ticks")
+# font = "/usr/share/fonts/winfont/simsun.ttc"
+# fp = fm.FontProperties(fname=font)
+# plt.rcParams["axes.unicode_minus"] = False
 

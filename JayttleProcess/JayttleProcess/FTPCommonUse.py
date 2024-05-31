@@ -35,7 +35,7 @@ class FTPConfig:
 @ComD.log_function_call
 def check_FTP_file() -> None:
     # 从 options.json 文件读取配置信息
-    with open(r'D:\Program Files (x86)\Software\OneDrive\PyPackages\options.json', 'r') as f:
+    with open(r'D:\Program Files (x86)\Software\OneDrive\PyPackages_DataSave\options.json', 'r') as f:
         options = json.load(f)
 
     # FTP服务器的地址和端口
@@ -103,7 +103,6 @@ def check_FTP_file() -> None:
     finally:
         # 关闭FTP连接
         ftp.quit()
-
 
 def download_files_from_ftp(ftp_config: FTPConfig, 
                             remote_folder: str, 
@@ -182,7 +181,7 @@ def copy_files(from_folder: str, to_folder: str, prefix: str) -> None:
                 shutil.copy(source_file, destination_file)
 
 @ComD.log_function_call
-def Process_Copy(isFirst: bool, toDownload_path: str, merge_path: str) -> None:
+def Process_Copy(isFirst: bool,from_copy_merge_folder_list: list[str] , toDownload_path: str, merge_path: str) -> None:
     """处理第一部分数据."""
     if not isFirst:
         for filename in os.listdir(toDownload_path):
@@ -195,37 +194,38 @@ def Process_Copy(isFirst: bool, toDownload_path: str, merge_path: str) -> None:
                     files_to_download: list[str] = txt_file.readlines()
                 # 去除每行末尾的换行符
                 files_to_download = [file.strip() for file in files_to_download]
-                from_copy_folder = r"D:\Ropeway\R051_1619\FTPMerge"
-                merge_folders: list[str] = os.listdir(from_copy_folder)
-                file_data = {}
-                # 遍历 files_to_download 列表并检查是否需要移除元素
-                for file_to_download in files_to_download.copy():
-                    third_part: str = file_to_download.split('_')[2]  # 获取文件名中的第三部分
-                    first_part: str = file_to_download.split('_')[0][:4]
-                    isNeedRemove: bool = False
-                    if third_part in merge_folders and first_part == first_four_characters:
-                        isNeedRemove = True
-                        from_copy_merge_folder: str = os.path.join(from_copy_folder, third_part)
-                        to_merge_folder = os.path.join(merge_path, third_part)
-                        os.makedirs(to_merge_folder, exist_ok=True)
-                        copy_files(from_copy_merge_folder, to_merge_folder, first_four_characters)
-                    if not isNeedRemove:
-                        date_part: str = file_to_download.split('_')[2][:7]
-                        if date_part not in file_data:
-                            file_data[date_part] = []
-                        file_data[date_part].append(file_to_download.strip())
-                
-                # 删除长度不满指定个数的条目
-                specified_length = 8  # 指定的长度
-                to_remove = [date_part for date_part, files_list in file_data.items() if len(files_list) < specified_length]
-                for date_part in to_remove:
-                    del file_data[date_part]
+                for from_copy_folder in from_copy_merge_folder_list:
+                    print(f"from_copy_folder:{from_copy_folder}") 
+                    merge_folders: list[str] = os.listdir(from_copy_folder)
+                    file_data = {}
+                    # 遍历 files_to_download 列表并检查是否需要移除元素
+                    for file_to_download in files_to_download.copy():
+                        third_part: str = file_to_download.split('_')[2]  # 获取文件名中的第三部分
+                        first_part: str = file_to_download.split('_')[0][:4]
+                        isNeedRemove: bool = False
+                        if third_part in merge_folders and first_part == first_four_characters:
+                            isNeedRemove = True
+                            from_copy_merge_folder: str = os.path.join(from_copy_folder, third_part)
+                            to_merge_folder = os.path.join(merge_path, third_part)
+                            os.makedirs(to_merge_folder, exist_ok=True)
+                            copy_files(from_copy_merge_folder, to_merge_folder, first_four_characters)
+                        if not isNeedRemove:
+                            date_part: str = file_to_download.split('_')[2][:7]
+                            if date_part not in file_data:
+                                file_data[date_part] = []
+                            file_data[date_part].append(file_to_download.strip())
+                    
+                    # 删除长度不满指定个数的条目
+                    specified_length = 8  # 指定的长度
+                    to_remove = [date_part for date_part, files_list in file_data.items() if len(files_list) < specified_length]
+                    for date_part in to_remove:
+                        del file_data[date_part]
 
-                # 将更新后的 file_data 保存回原始的文本文件中
-                with open(toDownload_file, 'w') as txt_file:
-                    for files_list in file_data.values():
-                        txt_file.write('\n'.join(files_list) + '\n')
-
+                    # 将更新后的 file_data 保存回原始的文本文件中
+                    with open(toDownload_file, 'w') as txt_file:
+                        for files_list in file_data.values():
+                            txt_file.write('\n'.join(files_list) + '\n')
+# TODO: COPY逻辑改善
 
 
 
@@ -338,13 +338,15 @@ def Process_Check(toDownload_path, local_save_path):
 @ComD.log_function_call
 def Process_in_one_step():
     base_marker_names = ['B011', 'B021']
-    root_folder = f"D:\Ropeway" # 存储软件运行的根目录
-    to_process_marker_names = ['R052', 'R071']
-#    to_process_marker_names = ['R031', 'R032', 'R051', 'R052', 'R071', 'R072', 'R081', 'R082']
+    root_folder = r"H:\xjt_proj\Ropeway"
+    # to_process_marker_names = ['R052', 'R071']
+    to_process_marker_names = ['R032', 'R051', 'R052', 'R071', 'R072', 'R081', 'R082']
     # 指定时间范围
-    start_hour= 16
-    end_hour = 19
+    start_hour= 4
+    end_hour = 7
     TBC_Process = False
+    isFirstProcess = True
+    from_copy_merge_folder_list = []
     for item in to_process_marker_names:
         folder_name = f"{item}_{start_hour}{end_hour}"
         folder_path = os.path.join(root_folder, folder_name)
@@ -359,16 +361,18 @@ def Process_in_one_step():
         os.makedirs(TBC_folder, exist_ok=True)
         base_marker_names.append(item)
         Process_Part1(toDownload_folder, base_marker_names, start_hour, end_hour)
-        Process_Copy(False, toDownload_folder ,FTPMerge_folder)
 
-        # Process_Part2(toDownload_folder, FTP_folder)
-        # Process_Part3(FTP_folder)
-        # Process_Part4(FTP_folder, FTPMerge_folder)
-        # Process_Check(toDownload_folder, FTP_folder)
+        from_copy_merge_folder_list.append(FTPMerge_folder)
+        Process_Copy(isFirstProcess, from_copy_merge_folder_list, toDownload_folder ,FTPMerge_folder)
+
+        Process_Part2(toDownload_folder, FTP_folder)
+        Process_Part3(FTP_folder)
+        Process_Part4(FTP_folder, FTPMerge_folder)
+        Process_Check(toDownload_folder, FTP_folder)
         if TBC_Process:
             ComputerControl.TBC_auto_Process(FTPMerge_folder, folder_name)
         base_marker_names.remove(item)
-        
+        isFirstProcess = False
 
 def shut_down_tbc():
     ComputerControl.auto_turn_off_TBC()

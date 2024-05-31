@@ -366,6 +366,9 @@ def before_process_proj() -> None:
     my_tsd: list[TimeSeriesData] = [dataPoint_create_timeseries_data(datapoint, value_key) for datapoint in datapoints_csv]
     TSD.remove_average(my_tsd)
     # TSD.plot_TimeSeriesData_threshold(my_tsd, True, threshold = 100)
+
+
+    
 #TODO：再把晚上8点的~12点的 tbc处理
 #TODO：把东坐标 北坐标放入一个坐标系里看角度与分布  是否与风向有关
 #TODO：计算另一个天线进行对比比较 
