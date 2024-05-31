@@ -5,20 +5,12 @@ import json
 import chardet
 import pyproj
 import numpy as np
-<<<<<<< HEAD
 from datetime import datetime, timedelta
 from itertools import groupby
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from operator import attrgetter
 from scipy.stats import pearsonr, chi2_contingency
-=======
-from datetime import datetime
-from itertools import groupby
-import matplotlib.pyplot as plt
-from operator import attrgetter
-from scipy.stats import pearsonr
->>>>>>> a5479e3e3bdc4c5cbe39ef0c48f059f4716db872
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 from collections import defaultdict
@@ -42,10 +34,7 @@ class Met:
     def __str__(self) -> str:
         return f"DateTime: {self.datetime_obj}, Temperature: {self.temperature}, Humidity: {self.humidness}, Pressure: {self.pressure}, WindSpeed: {self.wind_speed}, WindDirection: {self.wind_direction}"
 
-<<<<<<< HEAD
 @CommonDecorator.log_function_call
-=======
->>>>>>> a5479e3e3bdc4c5cbe39ef0c48f059f4716db872
 def read_time_series_data(file_path: str) -> List[Met]:
     met_data_list: List[Met] = []
     with open(file_path, 'r', encoding='utf-8') as file:
@@ -168,7 +157,6 @@ def read_tianmeng_met() -> Dict[str, Tuple[float, float]]:
 
     
     return temperature_data, temperature_get_maxmin_time
-<<<<<<< HEAD
 
 
 def check_change_match_ratio(list_float1: list[float], list_float2: list[float], threshold: float = 0):
@@ -207,9 +195,6 @@ def check_change_match_ratio(list_float1: list[float], list_float2: list[float],
     print("卡方值:", chi2)
     print("p值:", p_value)
 
-=======
-#TODO:检查下tianmeng_met中每天取到最大值最小值的时候的 时间段
->>>>>>> a5479e3e3bdc4c5cbe39ef0c48f059f4716db872
 
 def run_compare_temperature():
     # File path
@@ -261,14 +246,11 @@ def run_compare_temperature():
     correlation_max_temp, _ = pearsonr(weather_max_temps_normalized_list, temperature_max_temps_normalized_list)
     correlation_min_temp, _ = pearsonr(weather_min_temps_normalized_list, temperature_min_temps_normalized_list)
 
-<<<<<<< HEAD
 
     check_change_match_ratio(weather_max_temps_normalized_list, temperature_max_temps_normalized_list)
     check_change_match_ratio(weather_min_temps_normalized_list, temperature_min_temps_normalized_list)
 
 
-=======
->>>>>>> a5479e3e3bdc4c5cbe39ef0c48f059f4716db872
     print(f"当天最高温度pearson相关系数: {correlation_max_temp}")
     print(f"当天最低温度pearson相关系数: {correlation_min_temp}")
 
@@ -463,10 +445,7 @@ def run_compare_wind():
     wind_min_temps: List[float] = []
     wind_mean_temps: List[float] = []
 
-<<<<<<< HEAD
     dates_with_high_wind: list[str] = []  # 保存平均湿度大于50的日期
-=======
->>>>>>> a5479e3e3bdc4c5cbe39ef0c48f059f4716db872
     # Iterate over each group
     for date, group in grouped_data:
         # Extract temperatures with corresponding timestamps from the group
@@ -475,7 +454,6 @@ def run_compare_wind():
         # Calculate maximum and minimum temperatures
         max_temp, max_temp_time = max(wind_timestamps, key=lambda x: x[0])
         min_temp, min_temp_time = min(wind_timestamps, key=lambda x: x[0])
-<<<<<<< HEAD
         # Calculate average humidity
         avg_wind = sum(val[0] for val in wind_timestamps) / len(wind_timestamps) *3.6
         # 如果平均湿度大于50，则将日期添加到列表中
@@ -497,32 +475,11 @@ def run_compare_wind():
 
     for date in dates_with_high_wind:
         print(f"高速风：{date}")
-=======
-
-        wind_max_temps.append(max_temp)
-        wind_min_temps.append(min_temp)
-        
-        weather_wind_data_list.append(weather_wind_data[str(date)])
-        # Store max and min temperatures along with their times in the dictionaries
-        wind_data[str(date)] = (max_temp, min_temp)
-
-        
-        # Calculate average humidity
-        avg_humidity = sum(val[0] for val in wind_timestamps) / len(wind_timestamps) *3.6
-        wind_mean_temps.append(avg_humidity)
-
-
-
->>>>>>> a5479e3e3bdc4c5cbe39ef0c48f059f4716db872
     correlation_max_temp, _ = pearsonr(wind_max_temps, weather_wind_data_list)
     correlation_min_temp, _ = pearsonr(wind_min_temps, weather_wind_data_list)
     correlation_mean_temp, _ = pearsonr(wind_mean_temps, weather_wind_data_list)
 
-<<<<<<< HEAD
     print(f"传感器最高风速与微软天气湿度pearson相关系数: {correlation_max_temp}")
-=======
-    print(f"传感器最高湿度与微软天气湿度pearson相关系数: {correlation_max_temp}")
->>>>>>> a5479e3e3bdc4c5cbe39ef0c48f059f4716db872
     print(f"传感器最低湿度与微软天气湿度pearson相关系数: {correlation_min_temp}")
     print(f"传感器平均湿度与微软天气湿度pearson相关系数: {correlation_mean_temp}")
 
@@ -580,7 +537,6 @@ def run_check_met():
     # 显示图形
     plt.show()
 
-<<<<<<< HEAD
 
 def find_met_data_by_date(met_data: List[Met], dates: List[str]) -> List[Met]:
     filtered_met_data = []
@@ -643,6 +599,3 @@ if __name__ == "__main__":
     check_target_date_met()
 
 
-=======
-run_compare_wind()
->>>>>>> a5479e3e3bdc4c5cbe39ef0c48f059f4716db872
