@@ -603,20 +603,6 @@ def load_DataPoints() -> dict[str, list[DataPoint]]:
     for i, (prefix, DataPoints) in enumerate(grouped_DataPoints.items()):
         print(f"索引: {i}, 前缀: {prefix}, 数据点数: {len(DataPoints)}")
 
-    easting, northing = east_north_coordinates["R051"]
-
-    east_test = 595169.880297 - easting
-    east_test *= 1000
-    north_test = 3927680.058262 - northing
-    north_test *= 1000
-    print(f"带网平差：east_test:{east_test}\t north_test={north_test}")
-    
-    east_test = 595169.873721 - easting
-    east_test *= 1000
-    north_test = 3927680.059320 - northing
-    north_test *= 1000
-    print(f"不带网平差：east_test:{east_test}\t north_test={north_test}")
-
     return grouped_DataPoints
 
 def load_DataPoints_return_dict() -> dict[str, list[DataPoint]]:
@@ -710,42 +696,6 @@ def main_TODO2():
     plt.ylabel('Difference')
     plt.xticks(rotation=45)
     plt.show()
-
-
-def main_TODO3():
-    locations = {
-        "B011": (35.474852, 118.072091),
-        "B011_11": (35.474853, 118.072092),
-        "B021": (35.465000, 118.035312),
-        "B021_11": (35.465001, 118.035313),
-        "R031": (35.473642676796, 118.054358431073),
-        "R032": (35.473666223407, 118.054360237421),
-        "R051": (35.473944469154, 118.048584306326),
-        "R052": (35.473974942138, 118.048586858521),
-        "R071": (35.474177696631, 118.044201562812),
-        "R072": (35.474204534806, 118.044203691212),
-        "R081": (35.474245973695, 118.042930824340),
-        "R082": (35.474269576552, 118.042932741649),
-    }
-
-    
-    # 定义一个字典来存储每个位置对应的东北坐标
-    east_north_coordinates = {}
-    # 批量转换经纬度坐标为东坐标 北坐标
-    for location, (lat, lon) in locations.items():
-        easting, northing = TBCProcessCsv.convert_coordinates(lat, lon)
-        east_north_coordinates[location] = (easting, northing)
-    
-    for location in east_north_coordinates:
-        print(f"{location}: {east_north_coordinates[location]}")
-    # # 计算以'R'开头的位置与'B011'和'B021'的距离
-    # for location, (easting, northing) in east_north_coordinates.items():
-    #     if location.startswith('R'):
-    #         for b_location, (b_easting, b_northing) in east_north_coordinates.items():
-    #             if b_location.startswith('B'):
-    #                 distance = calculate_distance(easting, northing, b_easting, b_northing)
-    #                 print(f"距离 {location} 到 {b_location} 的距离为: {distance:.2f} 米")
-
 
 def main_TODO4_rms():
     locations = {
@@ -1019,6 +969,39 @@ def plot_list_DataPoint(DataPoints: list[DataPoint], title: str):
 
     plt.show()
 
+def plot_list_DataPoint_without_time(DataPoints: list[DataPoint], title: str):
+    north_list = [data.north_coordinate for data in DataPoints]
+    east_list = [data.east_coordinate for data in DataPoints]
+    # 修改标签和标题的文本为中文
+    fig, axs = plt.subplots(2, figsize=(8, 6), sharex=True) # 创建包含两个子图的画布
+
+    date_locator = mdates.AutoDateLocator()  # 自动选择刻度间隔
+    for ax in axs:
+        ax.xaxis.set_major_locator(date_locator)
+        ax.grid(True) # 添加网格线
+
+    # 设置最大显示的刻度数
+    plt.gcf().autofmt_xdate()  # 旋转日期标签以避免重叠
+    plt.tight_layout()  # 自动调整子图间的间距和标签位置
+    
+    # 以个数索引序号为 x 轴
+    x_values = range(len(north_list))
+    
+    axs[0].plot(x_values, north_list, label='north') # 第一个子图绘制north_list
+    axs[1].plot(x_values, east_list, label='east') # 第二个子图绘制east_list
+
+    # 添加子图标签和显示图例
+    axs[0].set_ylabel('North') 
+    axs[1].set_ylabel('East')
+    axs[1].set_xlabel('日期')
+
+    # 设置子图标题
+    axs[0].set_title(f'{title}_North')
+    axs[1].set_title(f'{title}_East')
+
+    plt.show()
+
+    
 def analysis_accuracy_list_DataPoint(DataPoints: list[DataPoint]):
     accuracy_evaluate_list ={
         'rms': [data.rms*1000 for data in DataPoints],
@@ -1079,42 +1062,6 @@ def filter_datapoints(data_points, start_date_str):
     filtered_points = [dp for dp in data_points if start_date <= dp.start_time <= end_date]
     return filtered_points
 
-
-def main_TODO7():
-    grouped_DataPoints = load_DataPoints()
-
-
-    color_map = {1: (242, 204, 142),
-                2: (223, 122, 94),
-                3: (60, 64, 91),
-                4: (130, 178, 154)}
-    dates = ["2023-03-06 23:59:42", "2023-04-03 23:59:42", "2023-08-03 23:59:42", "2023-12-03 23:59:42", "2024-02-03 23:59:42"]
-    dates = ["2023-03-06 23:59:42", "2023-08-03 23:59:42", "2023-12-03 23:59:42", "2024-02-03 23:59:42"]  # Selected dates
-    filtered_results = {}
-
-    # Filtering data points for "R071_1619"
-    if "R071_1619" in grouped_DataPoints:
-        for date in dates:
-            filtered_data = filter_datapoints(grouped_DataPoints["R071_1619"], date)
-            filtered_results[date] = filtered_data
-            print(f"{date} to {datetime.strptime(date, '%Y-%m-%d %H:%M:%S') + timedelta(days=23)} data: {len(filtered_data)} data points")
-
-    plt.figure(figsize=(14.4, 9.6))
-    plt.xlabel('日期')
-    plt.ylabel('数值')
-    plt.title('时间序列数据')
-
-    date_locator = mdates.AutoDateLocator()
-    plt.gca().xaxis.set_major_locator(date_locator)
-    for i, date in enumerate(filtered_results):
-        values = [item.north_coordinate for item in filtered_results[date]]
-        line, = plt.plot(range(len(values)), values, label=date)
-        color_index = i % len(color_map) + 1
-        line.set_color(np.array(color_map[color_index]) / 255.0)
-
-    plt.legend()
-    plt.show()
-    plt.close()
 
 def main_TODO8():
     grouped_DataPoints = load_DataPoints()
@@ -1192,48 +1139,11 @@ def main_TODO9():
                 outliers_time_dict[date_str] = []
             outliers_time_dict[date_str].append(f"{key}")
 
+    # 按照日期对 outliers_time_dict 进行排序
+    sorted_outliers_time_dict = dict(sorted(outliers_time_dict.items()))
 
-    for key, list_time in outliers_time_dict.items():
+    for key, list_time in sorted_outliers_time_dict.items():
         print(f"{key}:{list_time}")
-
-
-    # 新建一个字典用于存储日期和对应的总权重
-    date_weights = {}
-
-    # 映射每个前缀与其对应的权重
-    prefix_weights: dict[str, float] = {}
-    for marker_name, list_datapoint in grouped_DataPoints.items():
-        rms_list = [data.rms*1000 for data in list_datapoint]
-        average_rms = sum(rms_list) / len(rms_list)
-        prefix_weights[marker_name[:4]] = 1.0 / average_rms 
-        #用rms平均值来作为权值
-
-
-    # 遍历每个日期及其对应的字符串列表
-    for date, time_list in outliers_time_dict.items():
-        # 初始化总权重
-        total_weight = 0
-        # 统计每个前四个字符出现的次数，并分配权重
-        for item in time_list:
-            prefix = item[:4]
-            if prefix in prefix_weights:
-                total_weight += prefix_weights[prefix]
-
-        # 存储日期和对应的总权重
-        date_weights[date] = total_weight
-
-    # 输出日期和其对应的总权重
-    for date, weight in date_weights.items():
-        if weight > 0.20:
-            print(f"{date}: {weight:.2f}: {outliers_time_dict[date]}")
-            for target_key in outliers_time_dict[date]:
-                consecutive_count = find_consecutive_data(grouped_DataPoints, target_key, date)
-                print(f"{target_key} around {date} is: {consecutive_count}")
-    
-    
-
-    # consecutive_count = find_consecutive_data(grouped_DataPoints, target_key, date)
-    # print(f"The number of consecutive occurrences of {target_key} around {date} is: {consecutive_count}")
 
 def find_consecutive_data(data_dict: dict[str, list[DataPoint]], target_key: str, target_date: str) -> int:
     # 找到目标日期的数据点
@@ -1268,30 +1178,6 @@ def find_consecutive_data(data_dict: dict[str, list[DataPoint]], target_key: str
             return count
         else:
             return 0
-
-#TODO:帮我对权值过大的日期前后多方面看看
-    
-    # plt.figure(figsize=(14.4, 9.6))
-    # plt.xlabel('日期')
-    # plt.ylabel('数值')
-    # plt.title('时间序列数据')
-    # date_locator = mdates.AutoDateLocator()
-    # plt.gca().xaxis.set_major_locator(date_locator)
-
-    # plt.plot(range(len(distances)), distances, label='距离')
-    # plt.plot(range(len(rms_list)), rms_list, label='rms', alpha=0.3)
-    # plt.legend()
-    # plt.show()
-    # plt.close()
-
-def main_TODO10():
-    # Example usage:
-    file_path = r"D:\Program Files (x86)\Software\OneDrive\PyPackages_DataSave\tianmeng_tiltmeter.txt"
-    tilt_sensor_reader = TiltSensorDataReader(file_path)
-    tilt_sensor_data = tilt_sensor_reader.read_data()
-
-    print(len(tilt_sensor_data))
-
 
 def main_TODO11():
     # Example usage:
@@ -1352,12 +1238,12 @@ def main_TODO12():
 
     plot_data_in_season_version2(list_distance, datetime_list, marker_time=datetime_dates, title=marker_name)
 
+
 def main_TODO13():
     grouped_DataPoints: dict[str, list[DataPoint]] = load_DataPoints()
-    # marker_name = "R031_1619"
-    # for marker_name, list_datapoint in grouped_DataPoints.items():
-    #     print(f"{marker_name}:")
-    #     analysis_level_DataPoint(list_datapoint)
+    marker_name = 'R081_1619'
+    plot_list_DataPoint_without_time(grouped_DataPoints[marker_name], marker_name)
+
 
 if __name__ == "__main__":
     print("---------------------run-------------------")
@@ -1368,5 +1254,3 @@ if __name__ == "__main__":
 #TODO: 计算distance 并且distance按照月份 挑选几周来进行对比
 #TODO: 还得看看met中的风向
 #TODO: 还得处理倾斜仪数据
-
-#TODO: 测量精度中的水平精度和垂直精度还需要 进行进一步的处理 因为我数据读取是一行，而基线解算的精度有两条

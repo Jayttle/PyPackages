@@ -19,7 +19,7 @@ from typing import List, Tuple, Dict
 from JayttleProcess import CommonDecorator
 from JayttleProcess import TimeSeriesDataMethod as TSD
 from JayttleProcess.TimeSeriesDataMethod import TimeSeriesData
-
+from scipy.interpolate import interp1d
 
 
 class Met:
@@ -427,6 +427,45 @@ def run_compare_humidity():
     print(f"平均绝对误差: {mae_max_temp}")
     # print(f"当天最低温度--平均绝对误差: {mae_min_temp}")
     
+def run_filter_humidity():
+    input_file_path: str = r"C:\Users\Jayttle\Desktop\tianmeng_met.txt"
+    met_data: List[Met] = read_time_series_data(input_file_path)
+    met_data.sort(key=attrgetter('datetime_obj'))
+
+    grouped_data = groupby(met_data, key=lambda met: met.datetime_obj.date())
+    humidity_data: Dict[str, Tuple[float, float]] = {}
+    humidity_get_maxmin_time: Dict[str, Tuple[str, str]] = {}
+
+    humidity_max_temps: List[float] = []
+    humidity_min_temps: List[float] = []
+    humidity_mean_temps: List[float] = []
+
+    # Iterate over each group
+    for date, group in grouped_data:
+        # Extract temperatures with corresponding timestamps from the group
+        humidity_timestamps = [(met.humidness, met.datetime_obj.time()) for met in group]
+        
+        # Calculate maximum and minimum temperatures
+        max_temp, max_temp_time = max(humidity_timestamps, key=lambda x: x[0])
+        min_temp, min_temp_time = min(humidity_timestamps, key=lambda x: x[0])
+
+        humidity_max_temps.append(max_temp)
+        humidity_min_temps.append(min_temp)
+        
+        # Store max and min temperatures along with their times in the dictionaries
+        humidity_data[str(date)] = (max_temp, min_temp)
+
+        # Calculate average humidity
+        avg_humidity = sum(val[0] for val in humidity_timestamps) / len(humidity_timestamps)
+        humidity_mean_temps.append(avg_humidity)
+
+    high_humidity_dates = [date for date, (max_temp, min_temp) in humidity_data.items() if max_temp > 90 or min_temp > 90]
+    if high_humidity_dates:
+        print("湿度超过90的日期：")
+        for date in high_humidity_dates:
+            print(date)
+    else:
+        print("没有湿度超过90的日期。")
 
 def run_compare_wind():
         # File path
@@ -549,11 +588,16 @@ def find_met_data_by_date(met_data: List[Met], dates: List[str]) -> List[Met]:
 
 def plot_data_with_datetimes(value: List[float], datetimes:List[datetime], color='blue'):
     plt.figure(figsize=(14.4, 9.6))
-    plt.xlabel('日期')
-    plt.ylabel('数值')
-    plt.title('时间序列数据')
 
-    date_locator = mdates.AutoDateLocator()
+    # 设置日期格式化器和日期刻度定位器
+    date_fmt = mdates.DateFormatter("%m-%d:%H")  # 仅显示月-日-时
+    date_locator = mdates.AutoDateLocator()  # 自动选择刻度间隔
+
+    plt.xlabel('日期')
+    plt.ylabel('数值-m/s')
+    plt.title('风速')
+
+    plt.gca().xaxis.set_major_formatter(date_fmt)
     plt.gca().xaxis.set_major_locator(date_locator)
     # 绘制折线图，根据阈值连接或不连接线段，并使用不同颜色
     prev_datetime = None
@@ -570,12 +614,59 @@ def plot_data_with_datetimes(value: List[float], datetimes:List[datetime], color
         prev_datetime = datetime
         prev_value = value
         prev_month = month
+    
     plt.show()
     # 显示图形
 
+def plot_data_with_datetimes_interp1d(value: List[float], datetimes: List[datetime], color='blue'):
+    plt.figure(figsize=(14.4, 9.6))
+
+    # 线性插值函数
+    interpolate_func = interp1d([mdates.date2num(dt) for dt in datetimes], value, kind='linear')
+
+    # 创建新的日期范围，每分钟一个时间点
+    min_datetime = min(datetimes)
+    max_datetime = max(datetimes)
+    new_datetimes = [min_datetime + timedelta(minutes=i) for i in range(int((max_datetime - min_datetime).total_seconds() / 60) + 1)]
+
+    # 应用插值函数获取新的数值序列
+    new_values = interpolate_func([mdates.date2num(dt) for dt in new_datetimes])
+
+    # 设置日期格式化器和日期刻度定位器
+    date_fmt = mdates.DateFormatter("%m-%d:%H")  # 仅显示月-日-时
+    date_locator = mdates.AutoDateLocator()  # 自动选择刻度间隔
+    plt.xlabel('日期')
+    plt.ylabel('数值-百分比')
+    plt.title('湿度')
+
+    plt.gca().xaxis.set_major_formatter(date_fmt)
+    plt.gca().xaxis.set_major_locator(date_locator)
+    
+    # 绘制插值后的数据
+    plt.plot(new_datetimes, new_values, linestyle='-', color='green')
+    # 绘制折线图，根据阈值连接或不连接线段，并使用不同颜色
+    prev_datetime = None
+    prev_value = None
+    prev_month = None
+    for datetime, value in zip(datetimes, value):
+        month = datetime.month
+        if prev_datetime is not None:
+            time_diff = datetime - prev_datetime
+            if time_diff < timedelta(hours=1):  # 如果时间间隔小于阈值，则连接线段
+                plt.plot([prev_datetime, datetime], [prev_value, value], linestyle='-', color=color)
+            else:  # 否则不连接线段
+                plt.plot([prev_datetime, datetime], [prev_value, value], linestyle='', color=color)
+        prev_datetime = datetime
+        prev_value = value
+        prev_month = month
+
+    plt.show()
+
 def check_target_date_met():
     # dates_to_check = ["2023-03-12", "2023-04-10", "2023-05-16","2023-06-06" ,"2023-07-07", "2023-07-09", "2023-08-11", "2023-10-31"]
-    dates_to_check = ["2023-08-08","2023-08-09","2023-08-10","2023-08-11","2023-08-12","2023-08-13","2023-08-14"]
+    # ates_to_check = ["2023-08-08","2023-08-09","2023-08-10","2023-08-11","2023-08-12","2023-08-13","2023-08-14"]
+    # dates_to_check = ["2023-08-10","2023-08-11","2023-08-12"]
+    dates_to_check = ["2023-10-29","2023-10-30","2023-10-31","2023-11-01","2023-11-02"]
     input_file_path: str = r"C:\Users\Jayttle\Desktop\tianmeng_met.txt"
     met_data: List[Met] = read_time_series_data(input_file_path)
     met_data.sort(key=attrgetter('datetime_obj'))
@@ -593,9 +684,9 @@ def check_target_date_met():
 
     #TODO: weather_data 是一天一个数据的不知道怎么进行对比
 
-    plot_data_with_datetimes(tempuare_list, time_list)
+    plot_data_with_datetimes(wind_list, time_list)
 if __name__ == "__main__":
     print("---------------------run-------------------")
-    check_target_date_met()
+    run_filter_humidity()
 
 

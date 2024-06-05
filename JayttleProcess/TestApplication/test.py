@@ -6,7 +6,6 @@ import time
 import warnings
 
 # 相关第三方库导入
-import pyproj
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -100,16 +99,16 @@ class ExtendedTimeSeriesData(TimeSeriesData):
         return f"Datapoint: {self.datapoint.x}, {self.datapoint.y}, Datetime: {self.datetime}"
     
 
-datapoint = Datapoint(10.5, 20.3)
-datetime_input = datetime.now()
-extended_data = ExtendedTimeSeriesData(datapoint, datetime_input)
+# datapoint = Datapoint(10.5, 20.3)
+# datetime_input = datetime.now()
+# extended_data = ExtendedTimeSeriesData(datapoint, datetime_input)
 
-# 将 value 设置为 datapoint.y
-extended_data.set_value_to_y()
+# # 将 value 设置为 datapoint.y
+# extended_data.set_value_to_y()
 
-# 现在 value 应该是 datapoint.y
-print("Value 设置为 datapoint.y:", extended_data.value)
-print("Value 设置为 datapoint.y:", extended_data.value_half())
+# # 现在 value 应该是 datapoint.y
+# print("Value 设置为 datapoint.y:", extended_data.value)
+# print("Value 设置为 datapoint.y:", extended_data.value_half())
 
 
 class TimeSeriesDataList:
@@ -145,18 +144,14 @@ class TimeSeriesDataList:
             change_rates.append(change_rate)
         return change_rates
 
-# 创建一个包含 TimeSeriesData 对象的列表
-data_list = [
-    TimeSeriesData(10.5, "2024-05-27 08:30:00"),
-    TimeSeriesData(20.3, "2024-05-27 09:00:00"),
-    TimeSeriesData(15.8, "2024-05-27 09:30:00")
-]
+# # 创建一个包含 TimeSeriesData 对象的列表
+# data_list = [
+#     TimeSeriesData(10.5, "2024-05-27 08:30:00"),
+#     TimeSeriesData(20.3, "2024-05-27 09:00:00"),
+#     TimeSeriesData(15.8, "2024-05-27 09:30:00")
+# ]
 
-# 创建 TimeSeriesDataList 对象
-time_series_data_list = TimeSeriesDataList(data_list)
+# # 创建 TimeSeriesDataList 对象
+# time_series_data_list = TimeSeriesDataList(data_list)
 
-# 使用 TimeSeriesDataList 对象调用计算方法
-print("均值:", time_series_data_list.calculate_mean())
-print("方差:", time_series_data_list.calculate_variance())
-print("标准差:", time_series_data_list.calculate_standard_deviation())
-print("变化率:", time_series_data_list.calculate_change_rate())
+print("hello world")

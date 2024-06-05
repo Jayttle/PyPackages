@@ -301,7 +301,7 @@ def TBC_in_one_step():
 
 def test():
     # 请替换为您希望识别的窗口区域的坐标
-    window_region_输入= (114, 269, 35, 12)
+    window_region_输入= (1274, 694 , 35, 12)
     recognized_text = read_text_from_window(window_region_输入)
     print(recognized_text)
 
