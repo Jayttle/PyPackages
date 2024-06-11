@@ -13,16 +13,10 @@ def log_function_call(func):
         print(f"Function '{func.__name__}' called at {call_time}")
 
         # 记录传入的参数
-        if len(args) + len(kwargs) > 3:
-            # 如果传入的参数很多，则只打印参数类型
-            args_type_str = ', '.join(map(lambda arg: f"{type(arg).__name__}", args))
-            kwargs_type_str = ', '.join(f"{key}={type(value).__name__}" for key, value in kwargs.items())
-            all_args_type = ', '.join(filter(None, [args_type_str, kwargs_type_str]))
-            print(f"Arguments type: {all_args_type}")
-        else:
-            # 如果不多于3个参数，则返回参数的值
-            all_args = ', '.join(filter(None, [str(arg) for arg in args] + [f"{key}={value}" for key, value in kwargs.items()]))
-            print(f"Arguments: {all_args}")
+        args_str = ', '.join([str(arg) for arg in args if isinstance(arg, (int, float, str))])
+        kwargs_str = ', '.join([f"{key}={value}" for key, value in kwargs.items() if isinstance(value, (int, float, str))])
+        all_args = ', '.join(filter(None, [args_str, kwargs_str]))
+        print(f"Arguments: {all_args}")
 
         # 调用函数并记录返回值
         result = func(*args, **kwargs)

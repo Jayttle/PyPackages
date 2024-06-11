@@ -12,6 +12,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import statsmodels.api as sm
+from collections import defaultdict
 from statsmodels.tsa.arima.model import ARIMA
 from statsmodels.tsa.ar_model import AutoReg
 from statsmodels.stats.diagnostic import acorr_ljungbox
@@ -455,6 +456,20 @@ def calculate_r_squared(y_true: np.ndarray, y_pred: np.ndarray) -> float:
     residual_sum_squares = np.sum((y_true - y_pred) ** 2)
     r_squared = 1 - (residual_sum_squares / total_sum_squares)
     return r_squared
+
+
+def calculate_distance(x1, y1, x2, y2):
+    distance = math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
+    return distance
+
+def calculate_bearing(x, y):
+    # 计算角度（弧度）
+    angle_radians = math.atan2(y, x)
+    # 将弧度转换为角度
+    angle_degrees = math.degrees(angle_radians)
+    # 确保角度在 [0, 360) 范围内
+    bearing = (angle_degrees + 360) % 360
+    return bearing
 
 
 def calculate_durbin_watson(residuals: np.ndarray) -> float:
@@ -3006,6 +3021,107 @@ def plot_ACF(TimeSeriesData: list[TimeSeriesData], SaveFilePath: Optional[str] =
     plt.close()
 
 
+# 定义一个函数来绘制极坐标图
+def plot_polar(distances_and_bearings: List[Tuple[float, float]], title = None):
+    # 创建一个极坐标图
+    fig, ax = plt.subplots(subplot_kw={'projection': 'polar'})
+    
+    # 遍历距离和方位角，绘制每个点
+    for distance, bearing in distances_and_bearings:
+        # 将方位角转换为弧度
+        theta = np.deg2rad(bearing)
+        # 绘制点
+        ax.plot(theta, distance, 'o', color='blue')
+    
+    # 设置极坐标图的标题
+    ax.set_title(f'{title}极坐标')
+    
+    # 显示图形
+    plt.show()
+
+def plot_polar_with_rms(rms_list: List[float], distances_and_bearings: List[Tuple[float, float]], threshold: float, title=None):
+    # 创建一个极坐标图
+    fig, ax = plt.subplots(subplot_kw={'projection': 'polar'})
+    
+    # 遍历距离、方位角和 RMS 值，绘制每个点
+    for i, (distance, bearing) in enumerate(distances_and_bearings):
+        # 将方位角转换为弧度
+        theta = np.deg2rad(bearing)
+        
+        # 绘制点
+        if rms_list[i] > threshold:
+            ax.plot(theta, distance, 'o', color='red', label='RMS Exceeded Threshold')
+        else:
+            ax.plot(theta, distance, 'o', color='blue')
+    
+    # 设置极坐标图的标题
+    ax.set_title(f'{title}极坐标')
+    
+    
+    # 显示图形
+    plt.show()
+
+def plot_polar_with_rms_exceeded(rms_list: List[float], distances_and_bearings: List[Tuple[TimeSeriesData, TimeSeriesData]], threshold: float, title=None):
+    # 创建一个极坐标图
+    fig, ax = plt.subplots(subplot_kw={'projection': 'polar'})
+    
+    # 遍历距离、方位角和 RMS 值，仅绘制超过阈值的点
+    for i, (distance, bearing) in enumerate(distances_and_bearings):
+        # 将方位角转换为弧度
+        theta = np.deg2rad(bearing.value)
+        
+        # 绘制超过阈值的点
+        if rms_list[i] > threshold:
+            ax.plot(theta, distance.value, 'o', color='blue', label='RMS Exceeded Threshold')
+    
+    # 设置极坐标图的标题
+    ax.set_title(f'{title}极坐标 (只显示超过阈值的点)')
+
+    # 显示图形
+    plt.show()
+
+
+def plot_polar_in_month(distances_and_bearings: List[Tuple[TimeSeriesData, TimeSeriesData]], title = None):
+    # 创建一个极坐标图
+    fig, ax = plt.subplots(subplot_kw={'projection': 'polar'})
+    
+    # 定义一个默认颜色
+    default_color = 'k'
+    
+    # 创建一个颜色映射，将月份映射到颜色
+    month_to_color = defaultdict(lambda: default_color)
+    month_to_color.update({
+        1: 'b', 2: 'b', 3: 'b',  # January, February, March: blue
+        4: 'r', 5: 'r', 6: 'r',  # April, May, June: red
+        7: 'g', 8: 'g', 9: 'g',  # July, August, September: green
+        10: 'orange', 11: 'orange', 12: 'orange',  # October, November, December: yellow
+    })
+
+    # 遍历距离和方位角，绘制每个点
+    for distance, bearing in distances_and_bearings:
+        # 将方位角转换为弧度
+        theta = np.deg2rad(bearing.value)
+        # 获取月份
+        month = distance.datetime.month
+        color = month_to_color[month]
+        # 绘制点
+        ax.plot(theta, distance.value, 'o', color=color, label=f'Month {month}')
+
+    # 添加假线条以创建图例
+    for month, color in month_to_color.items():
+        ax.plot([], [], 'o', color=color, label=f'Month {month}')
+
+    # 绘制 bearing 角度为 176.91600324062733 的直线
+    bearing_line_theta = np.deg2rad(176.91600324062733)
+    ax.plot([bearing_line_theta, bearing_line_theta], [0, ax.get_ylim()[1]], color='k', linestyle='--', label='Bearing Line')
+    
+    # 设置极坐标图的标题
+    ax.set_title(f'{title}极坐标')
+    
+    
+    # 显示图形
+    plt.show()
+    
 def plot_PACF(TimeSeriesData: list[TimeSeriesData], lags: int = 48, SaveFilePath: Optional[str] = None) -> None:
     """绘制偏自相关函数(PACF)图表"""
     # 提取时序数据的观测值

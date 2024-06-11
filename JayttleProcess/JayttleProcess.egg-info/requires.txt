@@ -13,3 +13,5 @@ chardet
 pyproj
 beautifulsoup4
 selenium
+pytesseract
+requests

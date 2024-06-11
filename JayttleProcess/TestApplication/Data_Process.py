@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import numpy as np
 from JayttleProcess import TimeSeriesDataMethod, TBCProcessCsv, CommonDecorator
+from JayttleProcess.ListFloatDataMethod import *
 from JayttleProcess.TimeSeriesDataMethod import TimeSeriesData
 
 class DataPoint:
@@ -35,7 +36,7 @@ class DataPoint:
         self.horizontal_accuracy = horizontal_accuracy  # 数据点的水平精度
         self.vertical_accuracy = vertical_accuracy  # 数据点的垂直精度
         self.north_coordinate_error = north_coordinate_error  # 基线解算的北坐标差值
-        self.east_coordinate_error = east_coordinate_error  # 基线解算的东坐标差值
+        self.east_coordinate_error = east_coordinate_error  # 基线解算的东坐标差    值
         self.elevation_error = elevation_error  # 数据点的高程误差
         self.height_error = height_error  # 数据点的高度误差
 
@@ -1248,7 +1249,7 @@ def main_TODO13():
 if __name__ == "__main__":
     print("---------------------run-------------------")
     main_TODO13()
-
+    
 #main_TODO2()
 # endregion
 #TODO: 计算distance 并且distance按照月份 挑选几周来进行对比

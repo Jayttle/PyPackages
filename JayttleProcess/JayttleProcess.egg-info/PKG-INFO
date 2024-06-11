@@ -1,7 +1,7 @@
 Metadata-Version: 2.1
 Name: JayttleProcess
-Version: 0.3.4
-Summary: modifty time:2024-05-10 
+Version: 0.3.5
+Summary: modifty time:2024-06-05 
 Home-page: https://github.com/Jayttle/PyPackages.git
 Author: Jayttle
 Author-email: 294448068@qq.com
@@ -20,3 +20,5 @@ Requires-Dist: chardet
 Requires-Dist: pyproj
 Requires-Dist: beautifulsoup4
 Requires-Dist: selenium
+Requires-Dist: pytesseract
+Requires-Dist: requests

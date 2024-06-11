@@ -2,8 +2,9 @@ from setuptools import setup, find_packages
 
 setup(
     name='JayttleProcess',
-    version='0.3.4',
-    description='modifty time:2024-05-10 \n en: Data Process;\n zh_CN:数据处理的方法',
+    version='0.3.5',
+    description='modifty time:2024-06-05 \n en: Data Process;\n zh_CN:数据处理的方法',
+    setup_requires=['wheel'],
     packages=find_packages(),
     install_requires=[
         'pyautogui',
