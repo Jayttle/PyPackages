@@ -8,7 +8,8 @@ import os
 
 # 相关第三方库导入
 from pyswarm import pso
-from JayttleProcess import TBCProcessCsv, ListFloatDataMethod
+from JayttleProcess import ListFloatDataMethod as LFDM
+from JayttleProcess import TBCProcessCsv
 import numpy as np
 import chardet
 import pandas as pd
@@ -188,7 +189,7 @@ def load_csv_data(folder_path: str) -> List['DataPoint']:
 
 def load_DataPoints_return_dict() -> dict[str, list[DataPoint]]:
     data_save_path = {
-        'R031_0407': r'D:\Program Files (x86)\Software\OneDrive\PyPackages_DataSave\new_data\R031_47',
+        'R031_0407': r'D:\Program Files (x86)\Software\OneDrive\PyPackages_DataSave\new_data\R031_0407',
         'R031_1215': r'D:\Program Files (x86)\Software\OneDrive\PyPackages_DataSave\new_data\R031_1215',
         'R032_1215': r'D:\Program Files (x86)\Software\OneDrive\PyPackages_DataSave\new_data\R032_1215',
         'R051_1215': r'D:\Program Files (x86)\Software\OneDrive\PyPackages_DataSave\new_data\R051_1215',
@@ -315,18 +316,24 @@ def load_DataPoints_in_ropeway() -> Tuple[dict[str, List[float]], dict[str, List
         "R081": (35.474245973695, 118.042930824340),
         "R082": (35.474269576552, 118.042932741649)
     }
-
+    locations_ropeway ={}
     # 定义一个字典来存储每个位置对应的东北坐标
     east_north_coordinates = {}
     # 批量转换经纬度坐标为东北坐标
     for location, (lat, lon) in locations.items():
         easting, northing = TBCProcessCsv.convert_coordinates(lat, lon)
         east_north_coordinates[location] = (easting, northing)
+        x_ropeway, y_ropeway = ropeway_transform_coordinates(easting, northing)
+        locations_ropeway[location] = (x_ropeway, y_ropeway)
 
 
     Receiver_DataPoints = load_DataPoints_return_dict()
     x_DataPoints, y_DataPoints=DataPoint_transform_return_xy(Receiver_DataPoints)
 
+    for key in x_DataPoints.keys():
+        x_DataPoints[key] = [(value - locations_ropeway[key[:4]][0]) * 1000 for value in x_DataPoints[key]]
+        y_DataPoints[key] = [(value - locations_ropeway[key[:4]][1]) * 1000 for value in y_DataPoints[key]]
+    
     return x_DataPoints, y_DataPoints
 
 
@@ -504,125 +511,6 @@ def calculate_distance(x1, y1, x2, y2):
     distance = math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
     return distance
 
-def lof_outlier_detect(data):
-    """
-    使用 LOF 算法进行局部异常值检测。
-    
-    参数：
-        - data: 一维数据，用于异常检测
-        
-    返回值：
-        - outliers: 异常点的索引
-        - scores: 每个数据点的异常分数
-    """
-    # 确保数据为 NumPy 数组
-    data = np.array(data).reshape(-1, 1)  # 转换数据为正确的形状
-    
-    # 训练 LOF 模型
-    lof = LocalOutlierFactor()
-    scores = lof.fit_predict(data)
-    
-    # 获取异常点的索引
-    outliers = np.where(scores == -1)[0]
-    
-    return outliers, scores
-
-
-def euclidean_distance(x, y):
-    """
-    计算两个向量之间的欧式距离。
-    
-    参数：
-        - x: 第一个向量
-        - y: 第二个向量
-        
-    返回值：
-        - distance: 欧式距离
-    """
-    return np.sqrt(np.sum((x - y) ** 2))
-
-def k_distance(data, point_index, k):
-    """
-    计算给定数据点到其 k 个最近邻居的距离。
-    
-    参数：
-        - data: 数据集
-        - point_index: 数据点的索引
-        - k: 近邻数
-        
-    返回值：
-        - k_distance: 到 k 个最近邻居的距离
-    """
-    distances = [euclidean_distance(data[point_index], data[i]) for i in range(len(data))]
-    distances.sort()
-    return distances[k]
-
-def reachability_distance(data, point_index, neighbor_index, k):
-    """
-    计算给定数据点到其邻居的可达距离。
-    
-    参数：
-        - data: 数据集
-        - point_index: 数据点的索引
-        - neighbor_index: 邻居点的索引
-        - k: 近邻数
-        
-    返回值：
-        - reachability_distance: 可达距离
-    """
-    return max(k_distance(data, neighbor_index, k), euclidean_distance(data[point_index], data[neighbor_index]))
-
-def local_reachability_density(data, point_index, k):
-    """
-    计算给定数据点的局部可达密度。
-    
-    参数：
-        - data: 数据集
-        - point_index: 数据点的索引
-        - k: 近邻数
-        
-    返回值：
-        - local_density: 局部可达密度
-    """
-    neighbors = [i for i in range(len(data)) if i != point_index]
-    reach_distances = [reachability_distance(data, point_index, neighbor_index, k) for neighbor_index in neighbors]
-    return 1.0 / (sum(reach_distances) / k)
-
-def local_outlier_factor(data, point_index, k):
-    """
-    计算给定数据点的局部离群因子（LOF）。
-    
-    参数：
-        - data: 数据集
-        - point_index: 数据点的索引
-        - k: 近邻数
-        
-    返回值：
-        - lof: 局部离群因子
-    """
-    neighbors = [i for i in range(len(data)) if i != point_index]
-    lrd_point = local_reachability_density(data, point_index, k)
-    lrd_neighbors = [local_reachability_density(data, neighbor_index, k) for neighbor_index in neighbors]
-    reach_distances = [reachability_distance(data, point_index, neighbor_index, k) for neighbor_index in neighbors]
-    return sum([lrd_neighbors[i] / lrd_point * reach_distances[i] / k for i in range(len(neighbors))])
-
-def lof_outlier_detect1(data, k):
-    """
-    使用 LOF 算法进行局部异常值检测。
-    
-    参数：
-        - data: 数据集
-        - k: 近邻数
-        
-    返回值：
-        - outliers: 异常点的索引
-        - lof_scores: 每个数据点的 LOF 分数
-    """
-    lof_scores = [local_outlier_factor(data, i, k) for i in range(len(data))]
-    threshold = np.percentile(lof_scores, 100 * (1 - 1.0 / len(data)))
-    outliers = [i for i, score in enumerate(lof_scores) if score > threshold]
-    return outliers, lof_scores
-
 
 def detect_anomalies_with_OneClassSVM(data: list[float]):
     # 转换数据为 NumPy 数组以便处理
@@ -768,9 +656,9 @@ def main_TODO1():
         for idx in to_print_idx:
             print(list_datapoint[idx].start_time)
         # # # print(list_datapoint[72].start_time)
-        ListFloatDataMethod.plot_ListFloat(east_coordinate_list, isShow=True)
+        LFDM.plot_ListFloat(east_coordinate_list, isShow=True)
         # ListFloatDataMethod.plot_ListFloat(without_print_data_list, isShow=True)
-        ListFloatDataMethod.plot_ListFloat_with_markeridx(ListFloat=east_coordinate_list, isShow=True, markeridx=to_print_idx)
+        LFDM.plot_ListFloat_with_markeridx(ListFloat=east_coordinate_list, isShow=True, markeridx=to_print_idx)
         for idx in outliers:
             print(list_datapoint[idx].start_time)
             #plot_float_with_mididx(east_coordinate_list, idx)
@@ -787,6 +675,8 @@ def main_TODO2():
     坐标转换
     """
     x_DataPoints, y_DataPoints = load_DataPoints_in_ropeway()
+    LFDM.plot_ListFloat(x_DataPoints['R051_1215'], isShow=True)
+    LFDM.plot_ListFloat(y_DataPoints['R051_1215'], isShow=True)
 
 
 if __name__ == "__main__":

@@ -413,7 +413,4 @@ def Process_in_one_step():
 #Process_in_one_step()
 
 if __name__=='__main__':
-    to_process = [20620, 17080, 22714, 19523, 28171, 43802]
-    for idx, item in enumerate(to_process):
-        result = item * 1.3 / 1024.0 * 75 / 1024.0
-        print(f"{idx}:{result}")
+    print('-----------run-----------')

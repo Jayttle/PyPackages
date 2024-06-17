@@ -6,6 +6,7 @@ import time
 import warnings
 
 # 相关第三方库导入
+from pyswarm import pso
 import pyproj
 import numpy as np
 import pandas as pd
@@ -19,10 +20,13 @@ from statsmodels.stats.diagnostic import acorr_ljungbox
 from sklearn.cluster import KMeans, DBSCAN, AgglomerativeClustering 
 from sklearn.linear_model import Ridge , Lasso, LassoCV, ElasticNet, LinearRegression
 from sklearn.metrics import root_mean_squared_error, mean_absolute_error, r2_score, mean_squared_error, silhouette_score, davies_bouldin_score, calinski_harabasz_score, v_measure_score
+from sklearn.ensemble import IsolationForest
+from sklearn.neighbors import LocalOutlierFactor, NearestNeighbors
 from sklearn.preprocessing import PolynomialFeatures, StandardScaler
 from sklearn.pipeline import make_pipeline
 from sklearn.mixture import GaussianMixture
-from sklearn.model_selection import GridSearchCV
+from sklearn.svm import OneClassSVM
+from sklearn.model_selection import GridSearchCV, cross_val_score
 from scipy.spatial.distance import euclidean
 from scipy import signal, fft
 from scipy.cluster import hierarchy
@@ -67,7 +71,7 @@ def remove_specific_value(data: list[float], specific_value: float) -> None:
         data[i] = (data[i] - specific_value) * 1000
     
 
-def plot_ListFloat(ListFloat: list[float], isShow: bool = False, SaveFilePath: Optional[str] = None) -> None:
+def plot_ListFloat(ListFloat: list[float], isShow: bool = False, SaveFilePath: Optional[str] = None, title: str = None) -> None:
     """绘制 ListFloat 对象的时间序列图"""
     # 不再使用 ListFloat，直接使用 ListFloat
     values = ListFloat
@@ -77,11 +81,13 @@ def plot_ListFloat(ListFloat: list[float], isShow: bool = False, SaveFilePath: O
     plt.figure(figsize=(14.4, 9.6)) # 单位是英寸
     plt.xlabel('日期')
     plt.ylabel('数值')
-    plt.title('时间序列数据')
+    if title is None:
+        plt.title('时间序列数据')
+    else:
+        plt.title(f'{title}')
 
     # 设置最大显示的刻度数
     plt.tight_layout()  # 自动调整子图间的间距和标签位置
-
     plt.plot(datetimes, values)
 
     if SaveFilePath is not None:
@@ -91,7 +97,7 @@ def plot_ListFloat(ListFloat: list[float], isShow: bool = False, SaveFilePath: O
     plt.close()
 
 
-def plot_ListFloat_Compare(ListFloat1: list[float], ListFloat2: list[float], SaveFilePath: Optional[str] = None) -> None:
+def plot_ListFloat_Compare(ListFloat1: list[float], ListFloat2: list[float], SaveFilePath: Optional[str] = None, title: str = None) -> None:
     """绘制两个ListFloat对象的时间序列图"""
     # 以个数索引序号为 x 轴
     x_values = range(len(ListFloat1))
@@ -99,7 +105,10 @@ def plot_ListFloat_Compare(ListFloat1: list[float], ListFloat2: list[float], Sav
     plt.figure(figsize=(14.4, 9.6)) # 单位是英寸
     plt.xlabel('索引')
     plt.ylabel('数值')
-    plt.title('时间序列数据')
+    if title is None:
+        plt.title('时间序列数据')
+    else:
+        plt.title(f'{title}')
 
     # 设置日期格式化器和日期刻度定位器
     date_locator = mdates.AutoDateLocator()  # 自动选择刻度间隔
@@ -207,6 +216,17 @@ def calculate_trend_line_residuals(data: list[float], trend_line: np.ndarray) ->
     residuals = np.array(data) - trend_line
     return residuals
 
+
+def calculate_and_print_static(data: list[float]) -> None:
+    mean = calculate_mean(data)
+    median = calculate_median(data)
+    variance = calculate_variance(data)
+    standard_deviation = calculate_standard_deviation(data)
+    print(f"mean = {mean}")
+    print(f"median = {median}")
+    print(f"variance = {variance}")
+    print(f"standard_deviation = {standard_deviation}")
+    
 
 def plot_residuals(residuals: np.ndarray, SaveFilePath: Optional[str] = None) -> None:
     """绘制残差图"""
@@ -1936,7 +1956,7 @@ def ceemd(data: List[float], num_trials: int = 100) -> Tuple[np.ndarray, np.ndar
     return imfs, rm
 
 
-def calculate_variance(imfs: np.ndarray) -> List[float]:
+def calculate_variance_imfs(imfs: np.ndarray) -> List[float]:
     """计算每个IMF的方差"""
     variances = []
     for imf in imfs:
@@ -2274,6 +2294,22 @@ def arima_model_forecast(data: list[float], p: int, q: int, future_steps: int, S
     
     return future_forecast, mse
 
+
+def plot_float_with_idx(data: list[float], startidx: int, endidx: int):
+    # 修改标签和标题的文本为中文
+    values = data[startidx: endidx]
+    plt.figure(figsize=(14.4, 9.6)) # 单位是英寸
+    plt.xlabel('idx')
+    plt.ylabel('数值')
+    plt.title(f'{startidx}-{endidx}索引数据可视化')
+    
+    plt.plot(range(len(values)), values)
+    # 设置最大显示的刻度数
+    plt.gcf().autofmt_xdate()  # 旋转日期标签以避免重叠
+    plt.tight_layout()  # 自动调整子图间的间距和标签位置
+
+    plt.show()
+    plt.close()
 
 def plot_ACF(data: list[float], SaveFilePath: Optional[str] = None) -> None:
     """绘制自相关函数(ACF)图表"""
@@ -2780,3 +2816,160 @@ def normalize_features(features: np.ndarray) -> np.ndarray:
     scaled_features = scaler.fit_transform(features)
     return scaled_features
 
+
+def detect_lv_dbscan_anomaly(data: list[float], eps: float, min_samples: int, lof_threshold: float) -> None:
+    # 将数据转换为NumPy数组
+    data_array = np.array(data).reshape(-1, 1)
+
+    # 数据标准化
+    scaler = StandardScaler()
+    scaled_data = scaler.fit_transform(data_array)
+
+    # 使用LV-DBSCAN算法进行聚类
+    dbscan = DBSCAN(eps=eps, min_samples=min_samples)
+    dbscan.fit(scaled_data)
+
+    # 获取每个样本的聚类标签
+    labels = dbscan.labels_
+
+    # 计算每个样本的局部异常因子（LOF）
+    lof_scores = LocalOutlierFactor(n_neighbors=min_samples + 1).fit_predict(scaled_data)
+
+    # 标记异常点
+    outliers = np.where(lof_scores == -1)[0]
+
+    # 打印异常点
+    print("Detected anomalies:")
+    for outlier in outliers:
+        print(f"Data point {outlier}: Cluster label: {labels[outlier]}, LOF score: {lof_scores[outlier]}")
+
+
+def optimize_dbscan_params(data: np.ndarray) -> Tuple[float, float]:
+    # 目标函数，用于优化
+    def dbscan_objective(params: Tuple[float, float]) -> float:
+        eps, min_samples = params
+        min_samples = int(min_samples)
+        dbscan = DBSCAN(eps=eps, min_samples=min_samples)
+        labels = dbscan.fit_predict(data.reshape(-1, 1))
+        # 优化轮廓系数，尽量不要有噪声点
+        if len(set(labels)) == 1 or -1 in labels:
+            return -1  # 一个簇或者有噪声，轮廓系数无法计算
+        score = silhouette_score(data.reshape(-1, 1), labels)
+        return -score  # pyswarm 是最小化目标函数
+
+    # 参数范围
+    lb: list[float] = [0.1, 2]  # eps的最小值，min_samples的最小值
+    ub: list[float] = [2, 20]   # eps的最大值，min_samples的最大值
+
+    # 粒子群优化
+    xopt, fopt = pso(dbscan_objective, lb, ub, swarmsize=50, maxiter=100)
+
+    return xopt
+
+
+def detect_ipsodbscan_anomaly(data: list[float]) -> Tuple[np.ndarray, np.ndarray]:
+    # 数据标准化
+    scaler = StandardScaler()
+    # 将列表转换为NumPy数组，并调整形状为(n_samples, n_features)
+    scaled_data = scaler.fit_transform(np.array(data).reshape(-1, 1))
+    
+    # 使用IPSO优化DBSCAN参数
+    eps, min_samples = optimize_dbscan_params(scaled_data)
+    min_samples = int(min_samples)
+
+    # 使用优化后的参数运行DBSCAN
+    dbscan = DBSCAN(eps=eps, min_samples=min_samples)
+    dbscan.fit(scaled_data)
+
+    # 异常点标记
+    labels = dbscan.labels_
+    outliers = np.where(labels == -1)[0]
+
+    # 打印结果
+    print(f"Optimal eps: {eps}, Optimal min_samples: {min_samples}")
+    print("Detected anomalies:", outliers)
+
+    return outliers, labels
+
+
+def detect_knn_anomaly(data: list[float], k: int = 5, outlier_fraction: float = 0.01) -> tuple[np.ndarray, np.ndarray, float]:
+    # 确保数据为NumPy数组
+    data = np.array(data).reshape(-1, 1)  # 转换数据为正确的形状
+
+    # 数据标准化
+    scaler = StandardScaler()
+    data_scaled = scaler.fit_transform(data)
+
+    # 训练K近邻模型
+    neighbors = NearestNeighbors(n_neighbors=k)
+    neighbors.fit(data_scaled)
+    
+    # 计算每个点到其k个最近邻居的距离
+    distances, indices = neighbors.kneighbors(data_scaled)
+
+    # 计算每个点的异常分数（平均距离）
+    anomaly_scores = distances.mean(axis=1)
+
+    # 确定异常分数的阈值
+    threshold = np.percentile(anomaly_scores, 100 * (1 - outlier_fraction))
+
+    # 检测异常点
+    outliers = np.where(anomaly_scores > threshold)[0]
+    return outliers, anomaly_scores, threshold
+
+
+def detect_anomalies_with_ema(data: list[float], alpha: float = 0.1, threshold_factor: float = 2.0) -> tuple[list[tuple[int, float]], np.ndarray]:
+    data_array = np.array(data)
+    ema = np.zeros_like(data_array)
+    ema[0] = data_array[0]
+    for i in range(1, len(data_array)):
+        ema[i] = alpha * data_array[i] + (1 - alpha) * ema[i - 1]
+    deviations = np.abs(data_array - ema)
+    std_deviation = np.std(data_array)
+    threshold = std_deviation * threshold_factor
+    anomalies = [(index, data_array[index]) for index, deviation in enumerate(deviations) if deviation > threshold]
+    return anomalies, ema
+
+
+def detect_anomalies_with_mad(data: list[float], threshold_factor: float = 3.0) -> list[tuple[int, float]]:
+    data_array = np.array(data)
+    median = np.median(data_array)
+    mad = np.median(np.abs(data_array - median))
+    mad_std_equivalent = 1.4826 * mad
+    upper_threshold = median + threshold_factor * mad_std_equivalent
+    lower_threshold = median - threshold_factor * mad_std_equivalent
+    anomalies = [(index, value) for index, value in enumerate(data_array)
+                 if value > upper_threshold or value < lower_threshold]
+    return anomalies
+
+
+def detect_anomalies_with_IsolationForest(data: list[float]) -> None:
+    data_reshaped = np.array(data).reshape(-1, 1)
+    model = IsolationForest(n_estimators=100, contamination=0.1)
+    model.fit(data_reshaped)
+    predictions = model.predict(data_reshaped)
+    print("Anomalies detected at indices:")
+    for i, val in enumerate(predictions):
+        if val == -1:
+            print(f"Index: {i}, Value: {data[i]}")
+
+
+def detect_anomalies_with_rolling_std(data: list[float], window_size: int, threshold_factor: float = 3.0) -> list[tuple[int, float]]:
+    data_series = pd.Series(data)
+    rolling_std = data_series.rolling(window=window_size).std()
+    std_mean = rolling_std.mean()
+    upper_threshold = std_mean + threshold_factor * std_mean
+    lower_threshold = std_mean - threshold_factor * std_mean
+    anomalies = [(index, data[index]) for index, std_dev in enumerate(rolling_std)
+                 if std_dev > upper_threshold or std_dev < lower_threshold]
+    return anomalies
+
+
+def detect_anomalies_with_OneClassSVM(data: list[float]) -> list[tuple[int, float]]:
+    data_array = np.array(data).reshape(-1, 1)
+    ocsvm = OneClassSVM(nu=0.05, kernel='rbf', gamma='auto')
+    ocsvm.fit(data_array)
+    predictions = ocsvm.predict(data_array)
+    anomaly_indices = np.where(predictions == -1)[0]
+    anomalies = [(index, data[index]) for index in anomaly_indices]
+    return anomalies

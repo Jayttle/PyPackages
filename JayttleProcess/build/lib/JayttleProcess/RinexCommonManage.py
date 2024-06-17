@@ -846,27 +846,40 @@ def process_file(file_path: str, file_name: str) -> None:
     """
     处理单个文件的函数
     """
+    if int(file_name[16:19]) > 216:
+        print(f"{file_name}超日期跳过")
+        return
+    # 读取文件内容
+    with open(file_path, 'r', encoding='utf-8') as file:
+        # 读取文件的所有行数据
+        lines = file.readlines()
+
     # 获取文件名的前四个字符
-    first_four_chars = file_name[:4]
-    
-    # 逐行读取文件的内容，只读取前四行
-    with open(file_path, 'r') as file:
-        lines = []
-        for _ in range(4):
-            lines.append(file.readline())
-    
-    # 检查前四行数据是否有以 "MARKER NAME" 结尾的行，并且将该行的前四个字符与文件名的前四个字符进行匹配
-    for i, line in enumerate(lines):
-        if line.strip().endswith("MARKER NAME"):
-            if line[:4] != first_four_chars:
-                # 修改第四行数据的前四个字符为文件名的前四个字符
-                lines[i] = first_four_chars + lines[i][4:]
-                # 将修改后的内容写回文件中
-                with open(file_path, 'w') as file:
-                    file.writelines(lines)
-                print(f"file: {file_name} is modified")
-            else:
-                print(f"Skipped file: {file_name}, as it is already modified.")
+    file_name_prefix = file_name[:4]
+    print(file_name_prefix)
+    # 遍历文件的前四行数据，查找以 "MARKER NAME" 结尾的行并替换该行的前四个字符为文件名的前四个字符
+    for i in range(min(4, len(lines))):
+        if lines[i].strip().endswith("MARKER NAME"):
+            # 如果行内容已经是要替换的内容，则直接结束替换过程
+            if lines[i].startswith(file_name_prefix):
+                print(f"{file_name}已完成")
+                return
+            
+            # 构造新的行内容
+            new_line = file_name_prefix + lines[i][4:]
+            # 将新的行内容替换原来的行
+            lines[i] = new_line
+            print(f"{file_name}第{i+1}行替换为{file_name_prefix}")
+            break
+    else:
+        print("前四行数据中未找到以 'MARKER NAME' 结尾的行。")
+        return
+
+    # 将修改后的内容写回文件
+    with open(file_path, 'w', encoding='utf-8') as file:
+        file.writelines(lines)
+
+
 
 def process_rnx_files(folder_path: str) -> None:
     """
@@ -875,28 +888,33 @@ def process_rnx_files(folder_path: str) -> None:
     """
     # 获取目标文件夹中所有文件夹的名字
     subdirectories = os.listdir(folder_path)
-    with concurrent.futures.ThreadPoolExecutor() as executor:
-        futures = []
-        for directory in subdirectories:
-            # 构建文件夹的完整路径
-            directory_path = os.path.join(folder_path, directory)
-            # 检查路径是否是文件夹
-            if os.path.isdir(directory_path):
-                # 遍历文件夹中的文件
-                for file_name in os.listdir(directory_path):
-                    # 检查文件是否是以 "_MO.rnx" 结尾的文件
-                    if file_name.endswith("_MO.rnx"):
-                        # 构建文件的完整路径
-                        file_path = os.path.join(directory_path, file_name)
-                        # 使用线程池处理文件
-                        futures.append(executor.submit(process_file, file_path, file_name))
-        
-        # 等待所有任务完成
-        for future in concurrent.futures.as_completed(futures):
-            try:
-                future.result()
-            except Exception as e:
-                print(f"An exception occurred: {e}")
+    # 存储符合条件的文件名的字典，键是目录路径，值是文件名列表
+    rnx_files = {}
+    
+    for directory in subdirectories:
+        # 构建文件夹的完整路径
+        directory_path = os.path.join(folder_path, directory)
+        # 检查路径是否是文件夹
+        if os.path.isdir(directory_path):
+            # 初始化当前目录的文件名列表
+            rnx_files[directory_path] = []
+            # 遍历文件夹中的文件
+            for file_name in os.listdir(directory_path):
+                # 检查文件是否是以 "_MO.rnx" 结尾的文件
+                if file_name.endswith("_MO.rnx"):
+                    if int(file_name[16:19]) < 216 and int(file_name[12:16]) == 2023:
+                        # 添加符合条件的文件名到文件名列表
+                        rnx_files[directory_path].append(file_name)
+
+    # 对字典中每个目录的文件名列表进行排序
+    for directory, files in rnx_files.items():
+        files.sort()
+
+    # 遍历字典，处理每个目录中的文件
+    for directory, files in rnx_files.items():
+        for file in files:
+            file_path = os.path.join(directory, file)
+            process_file(file_path=file_path,file_name=file)
 
 def count_lines_in_each_txt_file(folder_path: str) -> dict[str, int]:
     file_lines_mapping = {}
@@ -953,3 +971,6 @@ def delete_small_files(directory_path: str, threshold_size: float) -> None:
         file_size_kb = file_size_bytes / 1024  # 将文件大小转换为 KB
         if file_size_kb < threshold_size:
             os.remove(file_path)  # 删除文件
+
+if __name__ == '__main__':
+    process_file(r"D:\Ropeway\FTPMerge\20230651600\B02100000_R_20230651600_4H_01S_MO.rnx", f"R03100000_R_20232171200_4H_01S_MO.rnx")
