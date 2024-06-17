@@ -69,7 +69,7 @@ def get_subdirectories_toTBC_in_6files(folder_path, save_path):
                 if len(os.listdir(item_path)) == 6:
                     subdirectories.append(item)
 
-    # 遍历save_path的文件并去掉后缀，将subdirectories中重复的给remove
+    # 遍历save_path的文件并去掉后缀,将subdirectories中重复的给remove
     save_files = os.listdir(save_path)
     subdirectories = list(set(subdirectories) - set([os.path.splitext(file)[0] for file in save_files]))
 
@@ -147,7 +147,7 @@ def read_text_from_window(window_region: tuple[int, int, int, int]) -> str:
     screenshot = pyautogui.screenshot(region=window_region)
     # 示例：灰度化和二值化
     screenshot = screenshot.convert('L')  # 转为灰度图
-    threshold = 200  # 阈值，根据需要调整
+    threshold = 200  # 阈值,根据需要调整
     screenshot = screenshot.point(lambda p: p > threshold and 255)
     # 将截图保存为临时文件
     temp_image_path = "temp_screenshot.png"
@@ -197,7 +197,7 @@ def TBC_auto_Process(Merge_path, save_path):
     # 获取目标文件夹中所有文件夹的名字
     subdirectories = get_subdirectories_toTBC_in_6files(Merge_path, save_path)
     for directory in subdirectories:
-        exit_for_loop = False  # 标志，用于指示是否退出外部循环
+        exit_for_loop = False  # 标志,用于指示是否退出外部循环
         ensure_no_input_data()
         move_and_click(80, 37)#本地
         time.sleep(1) #等待
@@ -228,14 +228,14 @@ def TBC_auto_Process(Merge_path, save_path):
                 break  # 结束内部循环
             # 检查是否超过一分钟
             if time.time() - start_time_input > 60:
-                print("第一个循环执行时间超过1分钟，终止程序。")
-                exit_for_loop = True  # 设置标志，指示需要退出外部循环
+                print("第一个循环执行时间超过1分钟,终止程序。")
+                exit_for_loop = True  # 设置标志,指示需要退出外部循环
                 break  # 结束内部循环
             time.sleep(1)  # 等待
 
         # 检查是否需要退出外部循环
         if exit_for_loop:
-            print("外部循环执行时间超过1分钟，终止程序。")
+            print("外部循环执行时间超过1分钟,终止程序。")
             break  # 退出外部循环
 
         time.sleep(1) #等待
@@ -253,12 +253,12 @@ def TBC_auto_Process(Merge_path, save_path):
                 break  # 结束循环
             # 检查是否超过一分钟
             if time.time() - start_time_save > 100:
-                print("第二个循环执行时间超过1分钟，终止程序。")
-                exit_for_loop = True  # 设置标志，指示需要退出外部循环
+                print("第二个循环执行时间超过1分钟,终止程序。")
+                exit_for_loop = True  # 设置标志,指示需要退出外部循环
                 break
         # 检查是否需要退出外部循环
         if exit_for_loop:
-            print("外部循环执行时间超过1分钟，终止程序。")
+            print("外部循环执行时间超过1分钟,终止程序。")
             break  # 退出外部循环
         time.sleep(1.5) #等待
         move_and_click(80, 37)#本地

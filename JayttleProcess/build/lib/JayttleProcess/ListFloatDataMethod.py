@@ -96,6 +96,79 @@ def plot_ListFloat(ListFloat: list[float], isShow: bool = False, SaveFilePath: O
         plt.show()
     plt.close()
 
+def plot_points(x_points: list[float], y_points: list[float], title: str = None):
+    # plt.rcParams['axes.spines.top'] = False
+    # plt.rcParams['axes.spines.right'] = False
+    # plt.rcParams['axes.spines.bottom'] = False
+    # plt.rcParams['axes.spines.left'] = False
+    plt.figure(figsize=(14.4, 9.6))  # 设置图的大小，单位是英寸
+    
+    # 绘制散点图
+    plt.scatter(x_points, y_points)
+    
+    # 绘制x轴和y轴
+    axhline = plt.axhline(0, color='black', linewidth=1, zorder=1)  # 绘制x轴，黑色，线宽2，zorder设置在最上层
+    axvline = plt.axvline(0, color='black', linewidth=1, zorder=1)  # 绘制y轴，黑色，线宽2，zorder设置在最上层
+    
+    # 设置x轴和y轴的刻度放置方式为直接放在轴上
+    plt.tick_params(axis='x', direction='in')
+    plt.tick_params(axis='y', direction='in')
+    
+    plt.xlabel('X')  # 设置x轴标签
+    plt.ylabel('Y')  # 设置y轴标签
+    
+    if title is None:
+        plt.title('时间序列数据')  # 设置标题，默认为'时间序列数据'
+    else:
+        plt.title(title)  # 设置标题为传入的参数title
+    
+    # 获取当前的坐标轴对象
+    ax = plt.gca()
+    
+    # 手动设置刻度标签的位置
+    ax.xaxis.set_label_coords(.02, 0.5)  # 设置x轴标签的位置
+    ax.yaxis.set_label_coords(0.5, 1.02)  # 设置y轴标签的位置
+    
+    plt.tight_layout()  # 自动调整子图间的间距和标签位置
+    plt.show()
+
+def plot_points_with_markeridx(x_points: list[float], y_points: list[float], title: str = None, to_marker_idx: list[int] = []):
+    plt.figure(figsize=(14.4, 9.6))  # 设置图的大小，单位是英寸
+    
+    # 绘制散点图
+    plt.scatter(x_points, y_points)
+    
+    # 标记指定索引处的数据点
+    if to_marker_idx:
+        for idx in to_marker_idx:
+            if 0 <= idx < len(x_points) and 0 <= idx < len(y_points):
+                plt.scatter(x_points[idx], y_points[idx], color='red', marker='o', s=100, label=f'Index {idx}')
+
+    # 绘制x轴和y轴
+    axhline = plt.axhline(0, color='black', linewidth=1, zorder=1)  # 绘制x轴，黑色，线宽1，zorder设置在最上层
+    axvline = plt.axvline(0, color='black', linewidth=1, zorder=1)  # 绘制y轴，黑色，线宽1，zorder设置在最上层
+    
+    # 设置x轴和y轴的刻度放置方式为直接放在轴上
+    plt.tick_params(axis='x', direction='in')
+    plt.tick_params(axis='y', direction='in')
+    
+    plt.xlabel('X')  # 设置x轴标签
+    plt.ylabel('Y')  # 设置y轴标签
+    
+    if title is None:
+        plt.title('时间序列数据')  # 设置标题，默认为'时间序列数据'
+    else:
+        plt.title(title)  # 设置标题为传入的参数title
+    
+    # 获取当前的坐标轴对象
+    ax = plt.gca()
+    
+    # 手动设置刻度标签的位置
+    ax.xaxis.set_label_coords(.02, 0.5)  # 设置x轴标签的位置
+    ax.yaxis.set_label_coords(0.5, 1.02)  # 设置y轴标签的位置
+    
+    plt.tight_layout()  # 自动调整子图间的间距和标签位置
+    plt.show()
 
 def plot_ListFloat_Compare(ListFloat1: list[float], ListFloat2: list[float], SaveFilePath: Optional[str] = None, title: str = None) -> None:
     """绘制两个ListFloat对象的时间序列图"""
@@ -128,6 +201,59 @@ def plot_ListFloat_Compare(ListFloat1: list[float], ListFloat2: list[float], Sav
         plt.show()
     plt.close()
 
+def plot_ListFloat_with_markeridx(ListFloat: list[float], isShow: bool = False, SaveFilePath: Optional[str] = None, title: str = None, to_marker_idx: list[int] = []) -> None:
+    """绘制 ListFloat 对象的时间序列图，并标记指定索引处的数据点"""
+    values = ListFloat
+    datetimes = range(len(ListFloat))  # 使用数据长度生成简单的序号作为 x 轴
+
+    plt.figure(figsize=(14.4, 9.6))  # 设置图像大小，单位是英寸
+    plt.xlabel('日期')
+    plt.ylabel('数值')
+    if title is None:
+        plt.title('时间序列数据')
+    else:
+        plt.title(title)
+
+    plt.tight_layout()  # 自动调整子图间的间距和标签位置
+    plt.plot(datetimes, values)
+
+    # 标记指定索引处的数据点
+    if to_marker_idx:
+        for idx in to_marker_idx:
+            if 0 <= idx < len(values):
+                plt.scatter(idx, values[idx], color='red', marker='o', s=100, label=f'Index {idx}')
+
+    if SaveFilePath is not None:
+        plt.savefig(SaveFilePath)
+    elif isShow:
+        plt.legend()
+        plt.show()
+
+    plt.close()
+
+def plot_float_with_mididx(data: list[float], mididx: int):
+    # 确保 mididx 不超过索引范围
+    if mididx < 0 or mididx >= len(data):
+        print("Error: mididx is out of range.")
+        return
+    
+    # 确定 startidx 和 endidx
+    startidx = max(mididx - 3, 0)
+    endidx = min(mididx + 3, len(data))
+
+    values = data[startidx: endidx+1]
+    plt.figure(figsize=(14.4, 9.6)) # 单位是英寸
+    plt.xlabel('idx')
+    plt.ylabel('数值')
+    plt.title(f'{startidx}-{endidx}索引数据可视化')
+    
+    plt.plot(range(len(values)), values)
+    # 设置最大显示的刻度数
+    plt.gcf().autofmt_xdate()  # 旋转日期标签以避免重叠
+    plt.tight_layout()  # 自动调整子图间的间距和标签位置
+
+    plt.show()
+    plt.close()
 
 def convert_coordinates(lat: float, lon: float) -> tuple[float, float]:
     # 定义原始坐标系（WGS84）
@@ -2915,6 +3041,33 @@ def detect_knn_anomaly(data: list[float], k: int = 5, outlier_fraction: float = 
 
     # 检测异常点
     outliers = np.where(anomaly_scores > threshold)[0]
+    return outliers, anomaly_scores, threshold
+
+
+def detect_knn_anomaly_xy(x_points: list[float], y_points: list[float], k: int = 5, outlier_fraction: float = 0.01) -> tuple[np.ndarray, np.ndarray, float]:
+    # 将 x_points 和 y_points 合并成一个特征矩阵
+    data = np.column_stack((x_points, y_points))
+
+    # 数据标准化
+    scaler = StandardScaler()
+    data_scaled = scaler.fit_transform(data)
+
+    # 训练K近邻模型
+    neighbors = NearestNeighbors(n_neighbors=k)
+    neighbors.fit(data_scaled)
+    
+    # 计算每个点到其k个最近邻居的距离
+    distances, indices = neighbors.kneighbors(data_scaled)
+
+    # 计算每个点的异常分数（平均距离）
+    anomaly_scores = distances.mean(axis=1)
+
+    # 确定异常分数的阈值
+    threshold = np.percentile(anomaly_scores, 100 * (1 - outlier_fraction))
+
+    # 检测异常点
+    outliers = np.where(anomaly_scores > threshold)[0]
+
     return outliers, anomaly_scores, threshold
 
 
