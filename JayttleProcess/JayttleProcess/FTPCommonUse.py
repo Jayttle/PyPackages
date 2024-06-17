@@ -72,7 +72,7 @@ def check_FTP_file() -> None:
                 ftp.cwd(folder_name)  # 切换到对应文件夹
                 folder_files = ftp.nlst()  # 获取文件夹下的文件列表
 
-                # 输出文件夹中的文件数量
+
                 print(f"{folder_name} 文件夹中有 {len(folder_files)} 个文件。")
 
                 # 将文件夹下的文件名逐行保存到本地的 txt 文件中
@@ -103,6 +103,7 @@ def check_FTP_file() -> None:
     finally:
         # 关闭FTP连接
         ftp.quit()
+
 
 def download_files_from_ftp(ftp_config: FTPConfig, 
                             remote_folder: str, 
@@ -266,7 +267,7 @@ def Process_Part2(toDownload_path, local_save_path):
     2.完成指定文件的下载工作
     """
     # json文件
-    json_file_path = r'D:\Program Files (x86)\Software\OneDrive\PyPackages\options.json'
+    json_file_path = r'D:\Program Files (x86)\Software\OneDrive\C#\windows_C#\Cableway.Net7\Cableway.Download\options.json'
     # 读取json文件里的FTPConfig
     ftp_config = FTPConfig(json_file_path)
     # 下载的目的地
@@ -335,10 +336,45 @@ def Process_Check(toDownload_path, local_save_path):
     for folder_name, file_count in folder_file_count.items():
         print(f"文件夹 '{folder_name}' 中包含 {file_count} 个文件.")
 
+def process_rnx_files1(folder_path: str) -> None:
+    """
+    对每个文件夹中末尾是 _MO.rnx 的文件执行指定操作，将第四行数据的前四个字符修改为文件名的前四个字符。
+    在修改之前检查第四行数据的前四个字符是否已经等于文件名的前四个字符。如果是，则跳过该文件
+    """
+    # 获取目标文件夹中所有文件夹的名字
+    subdirectories = os.listdir(folder_path)
+    # 存储符合条件的文件名的字典，键是目录路径，值是文件名列表
+    rnx_files = {}
+    
+    for directory in subdirectories:
+        # 构建文件夹的完整路径
+        directory_path = os.path.join(folder_path, directory)
+        # 检查路径是否是文件夹
+        if os.path.isdir(directory_path):
+            # 初始化当前目录的文件名列表
+            rnx_files[directory_path] = []
+            # 遍历文件夹中的文件
+            for file_name in os.listdir(directory_path):
+                # 检查文件是否是以 "_MO.rnx" 结尾的文件
+                if file_name.endswith("_MO.rnx"):
+                    if int(file_name[16:19]) < 216 and int(file_name[12:16]) == 2023:
+                        # 添加符合条件的文件名到文件名列表
+                        rnx_files[directory_path].append(file_name)
+
+    # 对字典中每个目录的文件名列表进行排序
+    for directory, files in rnx_files.items():
+        files.sort()
+
+    # 遍历字典，处理每个目录中的文件
+    for directory, files in rnx_files.items():
+        for file in files:
+            file_path = os.path.join(directory, file)
+            print(f"directory={directory}\tfile={file}")
+
 @ComD.log_function_call
 def Process_in_one_step():
     base_marker_names = ['B011', 'B021']
-    root_folder = r"H:\xjt_proj\Ropeway"
+    root_folder = r"D:\Ropeway\MySQL"
     # to_process_marker_names = ['R052', 'R071']
     to_process_marker_names = ['R032', 'R051', 'R052', 'R071', 'R072', 'R081', 'R082']
     # 指定时间范围
@@ -366,14 +402,18 @@ def Process_in_one_step():
         Process_Copy(isFirstProcess, from_copy_merge_folder_list, toDownload_folder ,FTPMerge_folder)
 
         Process_Part2(toDownload_folder, FTP_folder)
-        Process_Part3(FTP_folder)
-        Process_Part4(FTP_folder, FTPMerge_folder)
-        Process_Check(toDownload_folder, FTP_folder)
+        # Process_Part3(FTP_folder)
+        # Process_Part4(FTP_folder, FTPMerge_folder)
+        # Process_Check(toDownload_folder, FTP_folder)
         if TBC_Process:
             ComputerControl.TBC_auto_Process(FTPMerge_folder, folder_name)
         base_marker_names.remove(item)
         isFirstProcess = False
 
-def shut_down_tbc():
-    ComputerControl.auto_turn_off_TBC()
-    ComputerControl.auto_turn_off()
+#Process_in_one_step()
+
+if __name__=='__main__':
+    to_process = [20620, 17080, 22714, 19523, 28171, 43802]
+    for idx, item in enumerate(to_process):
+        result = item * 1.3 / 1024.0 * 75 / 1024.0
+        print(f"{idx}:{result}")

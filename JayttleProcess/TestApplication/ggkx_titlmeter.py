@@ -119,6 +119,139 @@ class TiltmeterData:
         plt.tight_layout(pad=3.0)  # 调整子图布局以防止重叠，并设置较大的pad值以确保y轴标签不会被截断
         plt.show()
 
+
+    @classmethod
+    def plot_tiltmeter_data_with_vibration_detection(cls, tiltmeter_data_list: List['TiltmeterData'], specified_date=None, window_size=20, threshold=0.1):
+        # 提取 pitch 和 roll 数据以及时间数据
+        pitch_data = [data.pitch for data in tiltmeter_data_list]
+        roll_data = [data.roll for data in tiltmeter_data_list]
+        time_list = [data.time for data in tiltmeter_data_list]
+
+        # 检查指定日期是否存在于数据中
+        specified_date_exists = False
+        specified_date_data_indices = []
+        for idx, time in enumerate(time_list):
+            if time.date() == datetime.strptime(specified_date, '%Y-%m-%d').date():
+                specified_date_exists = True
+                specified_date_data_indices.append(idx)
+        
+        # 如果指定日期不存在，则打印错误消息并返回
+        if not specified_date_exists:
+            print("错误：数据中未找到指定的日期。")
+            return
+
+        # 提取指定日期的数据
+        specified_date_tiltmeter_data = [pitch_data[i] for i in specified_date_data_indices]
+
+        if not specified_date_tiltmeter_data:
+            print("指定日期无可用数据。")
+            return
+
+        # 提取 pitch 数据
+        pitch_data = np.array(specified_date_tiltmeter_data)
+        
+        # 计算振动幅度
+        vibration_magnitude = []
+        num_windows = len(pitch_data) - window_size + 1
+        for i in range(num_windows):
+            window_pitch_data = pitch_data[i:i+window_size]
+            window_std = np.std(window_pitch_data)  # 使用标准差作为振动幅度的度量
+            vibration_magnitude.append(window_std)
+
+        # 根据振动幅度的大小识别不同部分
+        non_vibration_indices = np.where(np.array(vibration_magnitude) <= threshold)[0]
+        vibration_indices = np.where(np.array(vibration_magnitude) > threshold)[0]
+
+        # 可视化结果
+        plt.figure(figsize=(10, 6))
+        plt.plot(range(len(pitch_data)), pitch_data, color='blue', label='Pitch Data')
+        plt.scatter(non_vibration_indices, pitch_data[non_vibration_indices], c='green', marker='o', label='非振动')
+        plt.scatter(vibration_indices, pitch_data[vibration_indices], c='red', marker='x', label='振动')
+        plt.xlabel('数据索引')
+        plt.ylabel('Pitch')
+        plt.title('带振动检测的倾斜计数据')
+        plt.legend()
+        plt.show() 
+
+    @classmethod
+    def plot_tiltmeter_data_in_specified_date_with_vibration_detection(cls, tiltmeter_data_list: List['TiltmeterData'], specified_date=None, window_size=30, threshold=0.1):
+        # 提取 pitch 和 roll 数据以及时间数据
+        pitch_data = [data.pitch for data in tiltmeter_data_list]
+        roll_data = [data.roll for data in tiltmeter_data_list]
+        time_list = [data.time for data in tiltmeter_data_list]
+
+        # Check if the specified date exists in the data
+        specified_date_exists = False
+        specified_date_data_indices = []
+        for idx, time in enumerate(time_list):
+            if time.date() == datetime.strptime(specified_date, '%Y-%m-%d').date():
+                specified_date_exists = True
+                specified_date_data_indices.append(idx)
+        
+        # If the specified date does not exist, print an error message and return
+        if not specified_date_exists:
+            print("Error: Specified date not found in the data.")
+            return
+        
+        # Print out the available dates in the data
+        available_dates = set(time.date() for time in time_list)
+        print("Available dates in the data:", available_dates)
+
+        # 创建两个子图
+        plt.figure(figsize=(14.4, 9.6))
+
+        # 设置日期格式化器和日期刻度定位器
+        date_fmt = mdates.DateFormatter("%m-%d %H:00")  # 仅显示月-日-时
+        date_locator = mdates.AutoDateLocator()  # 自动选择刻度间隔
+
+        # 计算振动幅度
+        vibration_magnitude_pitch = []
+        vibration_magnitude_roll = []
+        num_windows = len(pitch_data) - window_size + 1
+        for i in range(num_windows):
+            window_pitch_data = pitch_data[i:i+window_size]
+            window_roll_data = roll_data[i:i+window_size]
+            window_std_pitch = np.std(window_pitch_data)  # 使用标准差作为振动幅度的度量
+            window_std_roll = np.std(window_roll_data)
+            vibration_magnitude_pitch.append(window_std_pitch)
+            vibration_magnitude_roll.append(window_std_roll)
+
+        # 根据振动幅度的大小识别不同部分
+        non_vibration_indices_pitch = np.where(np.array(vibration_magnitude_pitch) <= threshold)[0]
+        vibration_indices_pitch = np.where(np.array(vibration_magnitude_pitch) > threshold)[0]
+
+        threshold = 0.05
+        non_vibration_indices_roll = np.where(np.array(vibration_magnitude_roll) <= threshold)[0]
+        vibration_indices_roll = np.where(np.array(vibration_magnitude_roll) > threshold)[0]
+
+        # 绘制 pitch 时序图
+        plt.subplot(2, 1, 1)
+        plt.plot([time_list[i] for i in specified_date_data_indices], [pitch_data[i] for i in specified_date_data_indices], color='blue', label='俯仰角')
+        plt.title('带振动检测的俯仰角变化')
+        plt.xlabel('日期')
+        plt.ylabel('俯仰角(°)')
+        # 在第一个子图中添加震荡检测结果
+        plt.scatter([time_list[i] for i in specified_date_data_indices if i in vibration_indices_pitch], [pitch_data[i] for i in specified_date_data_indices if i in vibration_indices_pitch], c='red', marker='x', label='振动点')
+        plt.legend()
+        plt.gca().xaxis.set_major_formatter(date_fmt)
+        plt.gca().xaxis.set_major_locator(date_locator)
+
+        # 绘制 roll 时序图
+        plt.subplot(2, 1, 2)
+        plt.plot([time_list[i] for i in specified_date_data_indices], [roll_data[i] for i in specified_date_data_indices], color='green', label='横滚角')
+        plt.title('带振动检测的横滚角变化')
+        plt.xlabel('日期')
+        plt.ylabel('横滚角(°)')
+        plt.gca().xaxis.set_major_formatter(date_fmt)
+        plt.gca().xaxis.set_major_locator(date_locator)
+
+        # 在第二个子图中添加震荡检测结果
+        plt.scatter([time_list[i] for i in specified_date_data_indices if i in vibration_indices_roll], [roll_data[i] for i in specified_date_data_indices if i in vibration_indices_roll], c='red', marker='x', label='振动点')
+        plt.legend()
+
+        plt.tight_layout()  # 调整子图布局以防止重叠
+        plt.show()
+
     @classmethod
     def plot_tiltmeter_data_in_specified_date(cls, tiltmeter_data_list: List['TiltmeterData'], specified_date=None):
         # 提取 pitch 和 roll 数据以及时间数据
@@ -147,24 +280,24 @@ class TiltmeterData:
         plt.figure(figsize=(14.4, 9.6))
 
         # # 设置日期格式化器和日期刻度定位器
-        date_fmt = mdates.DateFormatter("%m-%d-%H")  # 仅显示月-日-时
+        date_fmt = mdates.DateFormatter("%m-%d %H:00")  # 仅显示月-日-时
         date_locator = mdates.AutoDateLocator()  # 自动选择刻度间隔
 
         # 绘制 pitch 时序图
         plt.subplot(2, 1, 1)
         plt.plot([time_list[i] for i in specified_date_data_indices], [pitch_data[i] for i in specified_date_data_indices], color='blue')
-        plt.title('时间轴上的俯仰角变化')
+        plt.title('俯仰角变化')
         plt.xlabel('日期')
-        plt.ylabel('俯仰角')
+        plt.ylabel('俯仰角(°)')
         plt.gca().xaxis.set_major_formatter(date_fmt)
         plt.gca().xaxis.set_major_locator(date_locator)
 
         # 绘制 roll 时序图
         plt.subplot(2, 1, 2)
         plt.plot([time_list[i] for i in specified_date_data_indices], [roll_data[i] for i in specified_date_data_indices], color='green')
-        plt.title('时间轴上的横滚角变化')
+        plt.title('横滚角变化')
         plt.xlabel('日期')
-        plt.ylabel('横滚角')
+        plt.ylabel('横滚角(°)')
         plt.gca().xaxis.set_major_formatter(date_fmt)
         plt.gca().xaxis.set_major_locator(date_locator)
 
@@ -783,7 +916,7 @@ def run_main6():
     tiltmeter_data_list = TiltmeterData.from_file(data_file)
     # iltmeterData.plot_tiltmeter_data(tiltmeter_data_list)
     # normalized_data_list = TiltmeterData.normalize_tiltmeter_data(tiltmeter_data_list)
-    TiltmeterData.plot_tiltmeter_data_in_specified_date(tiltmeter_data_list, "2023-07-09")
+    TiltmeterData.plot_tiltmeter_data_in_specified_date_with_vibration_detection(tiltmeter_data_list, "2023-07-09")
 
     # # 初始化最大值和最小值为第一个数据点的值
     # min_pitch = tiltmeter_data_list[0].pitch

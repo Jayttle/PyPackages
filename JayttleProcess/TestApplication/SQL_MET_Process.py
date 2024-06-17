@@ -220,84 +220,80 @@ def run_compare_temperature():
             temperature_max_temps.append(temperature_max_temp)
             temperature_min_temps.append(temperature_min_temp)
 
-    # Normalize data
-    scaler_weather_max = MinMaxScaler()
-    scaler_weather_min = MinMaxScaler()
-    weather_max_temps_normalized = scaler_weather_max.fit_transform(np.array(weather_max_temps).reshape(-1, 1))
-    weather_min_temps_normalized = scaler_weather_min.fit_transform(np.array(weather_min_temps).reshape(-1, 1))
-
-    scaler_temperature_max = MinMaxScaler()
-    scaler_temperature_min = MinMaxScaler()
-    temperature_max_temps_normalized = scaler_temperature_max.fit_transform(np.array(temperature_max_temps).reshape(-1, 1))
-    temperature_min_temps_normalized = scaler_temperature_min.fit_transform(np.array(temperature_min_temps).reshape(-1, 1))
-    
-    weather_max_temps_normalized_list = weather_max_temps_normalized.tolist()
-    weather_min_temps_normalized_list = weather_min_temps_normalized.tolist()
-    temperature_max_temps_normalized_list = temperature_max_temps_normalized.tolist()
-    temperature_min_temps_normalized_list = temperature_min_temps_normalized.tolist()
-
-    weather_max_temps_normalized_list = np.array(weather_max_temps_normalized_list).reshape(-1)
-    temperature_max_temps_normalized_list = np.array(temperature_max_temps_normalized_list).reshape(-1)
-    weather_min_temps_normalized_list = np.array(weather_min_temps_normalized_list).reshape(-1)
-    temperature_min_temps_normalized_list = np.array(temperature_min_temps_normalized_list).reshape(-1)
-
-
-    # Calculate correlation coefficients
-    correlation_max_temp, _ = pearsonr(weather_max_temps_normalized_list, temperature_max_temps_normalized_list)
-    correlation_min_temp, _ = pearsonr(weather_min_temps_normalized_list, temperature_min_temps_normalized_list)
-
-
-    check_change_match_ratio(weather_max_temps_normalized_list, temperature_max_temps_normalized_list)
-    check_change_match_ratio(weather_min_temps_normalized_list, temperature_min_temps_normalized_list)
+    correlation_max_temp, _ = pearsonr(weather_max_temps, temperature_max_temps)
+    correlation_min_temp, _ = pearsonr(weather_min_temps, temperature_min_temps)
 
 
     print(f"当天最高温度pearson相关系数: {correlation_max_temp}")
     print(f"当天最低温度pearson相关系数: {correlation_min_temp}")
 
-    mse_max_temp = mean_squared_error(weather_max_temps_normalized_list, temperature_max_temps_normalized_list)
-    mse_min_temp = mean_squared_error(weather_min_temps_normalized_list, temperature_min_temps_normalized_list)
-    mae_max_temp = mean_absolute_error(weather_max_temps_normalized_list, temperature_max_temps_normalized_list)
-    mae_min_temp = mean_absolute_error(weather_min_temps_normalized_list, temperature_min_temps_normalized_list)
+    mse_max_temp = mean_squared_error(weather_max_temps, temperature_max_temps)
+    mse_min_temp = mean_squared_error(weather_min_temps, temperature_min_temps)
+    mae_max_temp = mean_absolute_error(weather_max_temps, temperature_max_temps)
+    mae_min_temp = mean_absolute_error(weather_min_temps, temperature_min_temps)
 
     print(f"当天最高温度--均方误差: {mse_max_temp}")
     print(f"当天最低温度--均方误差: {mse_min_temp}")
     print(f"当天最高温度--平均绝对误差: {mae_max_temp}")
     print(f"当天最低温度--平均绝对误差: {mae_min_temp}")
 
-    plt.figure(figsize=(10, 6))
+    # plt.figure(figsize=(9,6))
 
-    # Plot normalized weather_min_temps
-    plt.plot(range(len(weather_max_temps_normalized_list)), weather_max_temps_normalized_list, label='微软天气', color='blue')
+    # # Plot normalized weather_min_temps
+    # plt.plot(range(len(weather_max_temps)), weather_max_temps, label='微软天气最高温度', color='blue')
 
-    # Plot normalized temperature_min_temps
-    plt.plot(range(len(temperature_max_temps_normalized_list)), temperature_max_temps_normalized_list, label='气象仪', color='red')
+    # # Plot normalized temperature_min_temps
+    # plt.plot(range(len(temperature_max_temps)), temperature_max_temps, label='传感器最高温度', color='red')
 
-    # Adding labels and title
-    plt.xlabel('Days')
-    plt.ylabel('Normalized 当天最低温度')
-    plt.title('微软天气与气象仪数据对比--当天最高温度（归一化）')
-    plt.legend()
+    # # Adding labels and title
+    # plt.xlabel('Days')
+    # plt.ylabel('当天最高温度(℃)')
+    # plt.title('微软天气与气象仪数据对比--当天最高温度')
+    # plt.legend()
 
-    # Show plot
-    plt.grid(True)
-    plt.tight_layout()
-    plt.show()
+    # # Show plot
+    # plt.grid(True)
+    # plt.tight_layout()
+    # plt.show()
 
     # Calculate differences
-    # temp_differences = [weather_temp - met_temp for weather_temp, met_temp in zip(weather_min_temps, temperature_min_temps)]
-    #     # Calculate standard deviation
-    # std_deviation = np.std(temp_differences)
+    temp_differences = [weather_temp - met_temp for weather_temp, met_temp in zip(weather_min_temps, temperature_min_temps)]
+    # Calculate standard deviation
+    std_deviation = np.std(temp_differences)
 
-    # # Calculate mean
-    # mean_temp_diff = np.mean(temp_differences)
+    # Calculate mean
+    mean_temp_diff = np.mean(temp_differences)
 
-    # # Calculate coefficient of variation
-    # coefficient_variation = (std_deviation / mean_temp_diff) * 100
+    # Calculate coefficient of variation
+    coefficient_variation = (std_deviation / mean_temp_diff) * 100
     
-    # print(f"温度差值的平均值为: {mean_temp_diff}")
-    # print(f"温度差值的标准差为: {std_deviation}")
-    # print(f"温度差值的变异系数为: {coefficient_variation}%")
+    print(f"最低温度差值的平均值为: {mean_temp_diff}")
+    print(f"最低温度差值的标准差为: {std_deviation}")
+    print(f"最低温度差值的变异系数为: {coefficient_variation}%")
+
+        # Calculate differences
+
+    temp_differences = [weather_temp - met_temp for weather_temp, met_temp in zip(weather_max_temps, temperature_max_temps)]
+    # Calculate standard deviation
+    std_deviation = np.std(temp_differences)
+
+    # Calculate mean
+    mean_temp_diff = np.mean(temp_differences)
+
+    # Calculate coefficient of variation
+    coefficient_variation = (std_deviation / mean_temp_diff) * 100
     
+    print(f"最高温度差值的平均值为: {mean_temp_diff}")
+    print(f"最高温度差值的标准差为: {std_deviation}")
+    print(f"最高温度差值的变异系数为: {coefficient_variation}%")
+    
+
+    mse_max_temp = mean_squared_error(weather_min_temps, temperature_min_temps)
+    mae_max_temp = mean_absolute_error(weather_min_temps, temperature_min_temps)
+
+    print(f"均方误差: {mse_max_temp}")
+    # print(f"当天最低温度--均方误差: {mse_min_temp}")
+    print(f"平均绝对误差: {mae_max_temp}")
     # # Plotting
     # plt.figure(figsize=(10, 6))
 
@@ -404,20 +400,6 @@ def run_compare_humidity():
     print(f"传感器最低湿度与微软天气湿度pearson相关系数: {correlation_min_temp}")
     print(f"传感器平均湿度与微软天气湿度pearson相关系数: {correlation_mean_temp}")
 
-    plt.figure(figsize=(9,6))
-    # plt.plot(range(len(humidity_max_temps)), humidity_max_temps, label='传感器最低湿度', color='green')
-    plt.plot(range(len(humidity_mean_temps)), humidity_mean_temps, label='传感器平均湿度', color='green')
-    # plt.plot(range(len(humidity_min_temps)), humidity_min_temps, label='传感器最高湿度', color='red')
-    plt.plot(range(len(weather_humidity_data_list)), weather_humidity_data_list, label='微软天气湿度', color='blue')
-    # plt.bar(range(len(weather_humidity_data_list)), weather_humidity_data_list, label='微软天气湿度', color='blue', alpha=0.1)
-    plt.grid(color='#95a5a6',linestyle='--',linewidth=1,axis='y',alpha=0.6)
-
-    plt.xlabel('Days')
-    plt.ylabel('湿度')
-    plt.title('湿度数据对比')
- 
-    plt.tight_layout()
-    plt.show()
 
     mse_max_temp = mean_squared_error(weather_humidity_data_list, humidity_mean_temps)
     mae_max_temp = mean_absolute_error(weather_humidity_data_list, humidity_mean_temps)
@@ -425,8 +407,36 @@ def run_compare_humidity():
     print(f"均方误差: {mse_max_temp}")
     # print(f"当天最低温度--均方误差: {mse_min_temp}")
     print(f"平均绝对误差: {mae_max_temp}")
-    # print(f"当天最低温度--平均绝对误差: {mae_min_temp}")
+
+    # plt.figure(figsize=(9,6))
+    # # plt.plot(range(len(humidity_max_temps)), humidity_max_temps, label='传感器最低湿度', color='green')
+    # plt.plot(range(len(humidity_mean_temps)), humidity_mean_temps, label='传感器平均湿度', color='red')
+    # # plt.plot(range(len(humidity_min_temps)), humidity_min_temps, label='传感器最高湿度', color='red')
+    # plt.plot(range(len(weather_humidity_data_list)), weather_humidity_data_list, label='微软天气湿度', color='blue')
+    # # plt.bar(range(len(weather_humidity_data_list)), weather_humidity_data_list, label='微软天气湿度', color='blue', alpha=0.1)
+    # plt.grid(color='#95a5a6',linestyle='--',linewidth=1,axis='y',alpha=0.6)
+
+    # plt.xlabel('Days')
+    # plt.ylabel('湿度(%)')
+    # plt.title('微软天气与气象仪数据对比--平均湿度')
+    # plt.legend()
+    # plt.tight_layout()
+    # plt.show()
+
+    # Calculate differences
+    temp_differences = [weather_temp - met_temp for weather_temp, met_temp in zip(humidity_mean_temps, weather_humidity_data_list)]
+    # Calculate standard deviation
+    std_deviation = np.std(temp_differences)
+
+    # Calculate mean
+    mean_temp_diff = np.mean(temp_differences)
+
+    # Calculate coefficient of variation
+    coefficient_variation = (std_deviation / mean_temp_diff) * 100
     
+    print(f"差值的平均值为: {mean_temp_diff}")
+    print(f"差值的标准差为: {std_deviation}")
+    print(f"差值的变异系数为: {coefficient_variation}%")
 def run_filter_humidity():
     input_file_path: str = r"C:\Users\Jayttle\Desktop\tianmeng_met.txt"
     met_data: List[Met] = read_time_series_data(input_file_path)
@@ -522,20 +532,20 @@ def run_compare_wind():
     print(f"传感器最低湿度与微软天气湿度pearson相关系数: {correlation_min_temp}")
     print(f"传感器平均湿度与微软天气湿度pearson相关系数: {correlation_mean_temp}")
 
-    plt.figure(figsize=(9,6))
-    # plt.plot(range(len(humidity_max_temps)), humidity_max_temps, label='传感器最低湿度', color='green')
-    plt.plot(range(len(wind_mean_temps)), wind_mean_temps, label='传感器平均风速', color='green')
-    # plt.plot(range(len(humidity_min_temps)), humidity_min_temps, label='传感器最高湿度', color='red')
-    plt.plot(range(len(weather_wind_data_list)), weather_wind_data_list, label='微软天气风速', color='blue')
-    # plt.bar(range(len(weather_humidity_data_list)), weather_humidity_data_list, label='微软天气湿度', color='blue', alpha=0.1)
-    plt.grid(color='#95a5a6',linestyle='--',linewidth=1,axis='y',alpha=0.6)
+    # plt.figure(figsize=(9,6))
+    # # plt.plot(range(len(humidity_max_temps)), humidity_max_temps, label='传感器最低湿度', color='green')
+    # plt.plot(range(len(wind_mean_temps)), wind_mean_temps, label='传感器平均风速', color='red')
+    # # plt.plot(range(len(humidity_min_temps)), humidity_min_temps, label='传感器最高湿度', color='red')
+    # plt.plot(range(len(weather_wind_data_list)), weather_wind_data_list, label='微软天气风速', color='blue')
+    # # plt.bar(range(len(weather_humidity_data_list)), weather_humidity_data_list, label='微软天气湿度', color='blue', alpha=0.1)
+    # plt.grid(color='#95a5a6',linestyle='--',linewidth=1,axis='y',alpha=0.6)
 
-    plt.xlabel('Days')
-    plt.ylabel('风速')
-    plt.title('风速数据对比')
- 
-    plt.tight_layout()
-    plt.show()
+    # plt.xlabel('Days')
+    # plt.ylabel('风速(km/h)')
+    # plt.title('微软天气与气象仪数据对比--平均风速')
+    # plt.legend()
+    # plt.tight_layout()
+    # plt.show()
 
     mse_max_temp = mean_squared_error(weather_wind_data_list, wind_mean_temps)
     mae_max_temp = mean_absolute_error(weather_wind_data_list, wind_mean_temps)
@@ -545,6 +555,21 @@ def run_compare_wind():
     print(f"平均绝对误差: {mae_max_temp}")
     # print(f"当天最低温度--平均绝对误差: {mae_min_temp}")
 
+
+    # Calculate differences
+    temp_differences = [weather_temp - met_temp for weather_temp, met_temp in zip(wind_mean_temps, weather_wind_data_list)]
+    # Calculate standard deviation
+    std_deviation = np.std(temp_differences)
+
+    # Calculate mean
+    mean_temp_diff = np.mean(temp_differences)
+
+    # Calculate coefficient of variation
+    coefficient_variation = (std_deviation / mean_temp_diff) * 100
+    
+    print(f"差值的平均值为: {mean_temp_diff}")
+    print(f"差值的标准差为: {std_deviation}")
+    print(f"差值的变异系数为: {coefficient_variation}%")
 
 def run_check_met(): 
     input_file_path: str = r"C:\Users\Jayttle\Desktop\tianmeng_met.txt"
@@ -614,7 +639,8 @@ def plot_data_with_datetimes(value: List[float], datetimes:List[datetime], color
         prev_datetime = datetime
         prev_value = value
         prev_month = month
-    
+
+    plt.legend()
     plt.show()
     # 显示图形
 
@@ -687,6 +713,6 @@ def check_target_date_met():
     plot_data_with_datetimes(wind_list, time_list)
 if __name__ == "__main__":
     print("---------------------run-------------------")
-    run_filter_humidity()
+    run_compare_temperature()
 
 

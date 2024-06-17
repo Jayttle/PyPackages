@@ -10,7 +10,15 @@ from datetime import datetime, timedelta
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import numpy as np
-from JayttleProcess import TimeSeriesDataMethod, TBCProcessCsv, CommonDecorator
+from sklearn.cluster import KMeans, DBSCAN, AgglomerativeClustering 
+from sklearn.linear_model import Ridge , Lasso, LassoCV, ElasticNet, LinearRegression
+from sklearn.metrics import root_mean_squared_error, mean_absolute_error, r2_score, mean_squared_error, silhouette_score, davies_bouldin_score, calinski_harabasz_score, v_measure_score
+from sklearn.neighbors import LocalOutlierFactor, NearestNeighbors
+from sklearn.preprocessing import PolynomialFeatures, StandardScaler
+from sklearn.pipeline import make_pipeline
+from sklearn.mixture import GaussianMixture
+from sklearn.model_selection import GridSearchCV, cross_val_score
+from JayttleProcess import TimeSeriesDataMethod, TBCProcessCsv, CommonDecorator, ListFloatDataMethod
 from JayttleProcess.ListFloatDataMethod import *
 from JayttleProcess.TimeSeriesDataMethod import TimeSeriesData
 
@@ -1126,12 +1134,100 @@ def check_distance_return_time(list_datapoint: list[DataPoint]) -> list[datetime
 
     return outliers_times
 
+
+def find_best_k(data, k_values=[3, 5, 7, 9, 11], outlier_fraction=0.05):
+    """
+    使用交叉验证方法找出最佳的 K 值。
+    
+    参数：
+        - data: 一维数据，用于异常检测
+        - k_values: 待评估的 K 值列表，默认为 [3, 5, 7, 9, 11]
+        - outlier_fraction: 异常值比例，默认为 0.05
+        
+    返回值：
+        - best_k: 最佳的 K 值
+    """
+    # 定义一个函数来评估给定的 K 值
+    def evaluate_knn(k):
+        outliers, _, _ = knn_anomaly_detection(data, k=k, outlier_fraction=outlier_fraction)
+        return -len(outliers)  # 使用异常点的数量作为性能指标，负号表示越少越好
+
+    best_k = None
+    best_score = float('-inf')  # 初始化最佳得分
+
+    for k in k_values:
+        score = cross_val_score(evaluate_knn(k), np.zeros_like(data), cv=5).mean()  # 使用 5 折交叉验证
+        if score > best_score:
+            best_score = score
+            best_k = k
+
+    return best_k
+
+
+def knn_anomaly_detection(data, k=5, outlier_fraction=0.01):
+    # 确保数据为NumPy数组
+    data = np.array(data).reshape(-1, 1)  # 转换数据为正确的形状
+    # 数据标准化
+    scaler = StandardScaler()
+    data_scaled = scaler.fit_transform(data)
+
+    # 训练K近邻模型
+    neighbors = NearestNeighbors(n_neighbors=k)
+    neighbors.fit(data_scaled)
+    
+    # 计算每个点到其k个最近邻居的距离
+    distances, indices = neighbors.kneighbors(data_scaled)
+
+    # 计算每个点的异常分数（平均距离）
+    anomaly_scores = distances.mean(axis=1)
+
+    # 确定异常分数的阈值
+    threshold = np.percentile(anomaly_scores, 100 * (1 - outlier_fraction))
+
+    # 检测异常点
+    outliers = np.where(anomaly_scores > threshold)[0]
+
+    print(len(outliers))
+    return outliers, anomaly_scores, threshold
+
+def z_score_normalize(data):
+    # 将数据转换为 NumPy 数组
+    data_array = np.array(data)
+    
+    # 计算均值和标准差
+    mean = np.mean(data_array)
+    std_dev = np.std(data_array)
+    
+    # Z-score 标准化数据
+    normalized_data = (data_array - mean) / std_dev
+    
+    return normalized_data.tolist()  # 将 NumPy 数组转换回列表并返回
+
+def check_knn_return_time(list_datapoint: list[DataPoint]) -> list[datetime]:
+    distances_and_bearings = calculate_distance_and_bearing(list_datapoint)
+    # Extract distances from distances_and_bearings
+    distances = [distance for distance, _ in distances_and_bearings]
+    time_list = [data.start_time for data in list_datapoint]
+    # normalized_data = z_score_normalize(distances)
+
+    # for item in normalized_data:
+    #     print(item)
+    # print('-------------------------------')
+    outliers_times = []
+    outliers, anomaly_scores, threshold = knn_anomaly_detection(distances)
+    for idx in outliers:
+        # print(f"时间点：{time_list[idx]}")
+        outliers_times.append(time_list[idx])
+    return outliers_times
+
+
 def main_TODO9():
     grouped_DataPoints: dict[str, list[DataPoint]] = load_DataPoints()
     outliers_time_dict: dict[str, list[str]] = {}
     for key, list_datapoint in grouped_DataPoints.items():
         print(f"{key}:{len(list_datapoint)}")
-        outliers_times = check_distance_return_time(list_datapoint)
+        # outliers_times = check_distance_return_time(list_datapoint)
+        outliers_times = check_knn_return_time(list_datapoint)
         for time_obj in outliers_times:
             # 转换为字符串并进行切片操作
             time_str = str(time_obj)
@@ -1242,13 +1338,18 @@ def main_TODO12():
 
 def main_TODO13():
     grouped_DataPoints: dict[str, list[DataPoint]] = load_DataPoints()
-    marker_name = 'R081_1619'
-    plot_list_DataPoint_without_time(grouped_DataPoints[marker_name], marker_name)
+    marker_name = 'R031_0407'
+    east_coordinate_list = [data.east_coordinate for data in grouped_DataPoints[marker_name]]
+    north_coordinate_list = [data.north_coordinate for data in grouped_DataPoints[marker_name]]
+    ListFloatDataMethod.calculate_and_print_static(east_coordinate_list)
+    ListFloatDataMethod.calculate_and_print_static(north_coordinate_list)
+
+    # plot_list_DataPoint_without_time(grouped_DataPoints[marker_name], marker_name)
 
 
 if __name__ == "__main__":
     print("---------------------run-------------------")
-    main_TODO13()
+    main_TODO9()
     
 #main_TODO2()
 # endregion

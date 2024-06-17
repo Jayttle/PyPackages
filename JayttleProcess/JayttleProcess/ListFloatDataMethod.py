@@ -19,6 +19,7 @@ from statsmodels.stats.diagnostic import acorr_ljungbox
 from sklearn.cluster import KMeans, DBSCAN, AgglomerativeClustering 
 from sklearn.linear_model import Ridge , Lasso, LassoCV, ElasticNet, LinearRegression
 from sklearn.metrics import root_mean_squared_error, mean_absolute_error, r2_score, mean_squared_error, silhouette_score, davies_bouldin_score, calinski_harabasz_score, v_measure_score
+from sklearn.neighbors import LocalOutlierFactor
 from sklearn.preprocessing import PolynomialFeatures, StandardScaler
 from sklearn.pipeline import make_pipeline
 from sklearn.mixture import GaussianMixture
@@ -207,6 +208,17 @@ def calculate_trend_line_residuals(data: list[float], trend_line: np.ndarray) ->
     residuals = np.array(data) - trend_line
     return residuals
 
+
+def calculate_and_print_static(data: list[float]) -> None:
+    mean = calculate_mean(data)
+    median = calculate_median(data)
+    variance = calculate_variance(data)
+    standard_deviation = calculate_standard_deviation(data)
+    print(f"mean = {mean}")
+    print(f"median = {median}")
+    print(f"variance = {variance}")
+    print(f"standard_deviation = {standard_deviation}")
+    
 
 def plot_residuals(residuals: np.ndarray, SaveFilePath: Optional[str] = None) -> None:
     """绘制残差图"""
@@ -1936,7 +1948,7 @@ def ceemd(data: List[float], num_trials: int = 100) -> Tuple[np.ndarray, np.ndar
     return imfs, rm
 
 
-def calculate_variance(imfs: np.ndarray) -> List[float]:
+def calculate_variance_imfs(imfs: np.ndarray) -> List[float]:
     """计算每个IMF的方差"""
     variances = []
     for imf in imfs:
@@ -2274,6 +2286,22 @@ def arima_model_forecast(data: list[float], p: int, q: int, future_steps: int, S
     
     return future_forecast, mse
 
+
+def plot_float_with_idx(data: list[float], startidx: int, endidx: int):
+    # 修改标签和标题的文本为中文
+    values = data[startidx: endidx]
+    plt.figure(figsize=(14.4, 9.6)) # 单位是英寸
+    plt.xlabel('idx')
+    plt.ylabel('数值')
+    plt.title(f'{startidx}-{endidx}索引数据可视化')
+    
+    plt.plot(range(len(values)), values)
+    # 设置最大显示的刻度数
+    plt.gcf().autofmt_xdate()  # 旋转日期标签以避免重叠
+    plt.tight_layout()  # 自动调整子图间的间距和标签位置
+
+    plt.show()
+    plt.close()
 
 def plot_ACF(data: list[float], SaveFilePath: Optional[str] = None) -> None:
     """绘制自相关函数(ACF)图表"""
@@ -2780,3 +2808,28 @@ def normalize_features(features: np.ndarray) -> np.ndarray:
     scaled_features = scaler.fit_transform(features)
     return scaled_features
 
+def lv_dbscan_anomaly_detection(data: list[float], eps, min_samples, lof_threshold):
+    # 将数据转换为NumPy数组
+    data_array = np.array(data).reshape(-1, 1)
+
+    # 数据标准化
+    scaler = StandardScaler()
+    scaled_data = scaler.fit_transform(data_array)
+
+    # 使用LV-DBSCAN算法进行聚类
+    dbscan = DBSCAN(eps=eps, min_samples=min_samples)
+    dbscan.fit(scaled_data)
+
+    # 获取每个样本的聚类标签
+    labels = dbscan.labels_
+
+    # 计算每个样本的局部异常因子（LOF）
+    lof_scores = LocalOutlierFactor(n_neighbors=min_samples + 1).fit_predict(scaled_data)
+
+    # 标记异常点
+    outliers = np.where(lof_scores == -1)[0]
+
+    # 打印异常点
+    print("Detected anomalies:")
+    for outlier in outliers:
+        print(f"Data point {outlier}: Cluster label: {labels[outlier]}, LOF score: {lof_scores[outlier]}")

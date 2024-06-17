@@ -24,6 +24,7 @@ setup(
         'selenium',
         'pytesseract',
         'requests',
+        'pyswarm',
         # 添加其他依赖项（如果有的话）
     ],
     author='Jayttle',
