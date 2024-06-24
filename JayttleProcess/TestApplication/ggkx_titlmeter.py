@@ -31,10 +31,11 @@ from scipy.cluster import hierarchy
 from scipy.stats import t, shapiro, pearsonr, f_oneway, gaussian_kde
 from scipy.signal import hilbert, find_peaks
 from PyEMD import EMD, EEMD, CEEMDAN
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Tuple, Union, Set, Dict
 import pywt
 from JayttleProcess import TimeSeriesDataMethod, TBCProcessCsv, CommonDecorator
 from JayttleProcess.TimeSeriesDataMethod import TimeSeriesData
+from JayttleProcess import ListFloatDataMethod as LFDM
 
 # region 字体设置
 plt.rcParams['font.sans-serif'] = ['SimSun']  # 指定宋体为默认字体
@@ -57,20 +58,97 @@ class TiltmeterData:
         """
         数据读取 129904 24.2381s
         效率 5361个/s
+        8757913 356.5892s (有判断的)
         """
         tiltmeter_data_list: List['TiltmeterData'] = []
         with open(file_path, 'r') as file:
             next(file)  # Skip the header row
             for line in file:
                 data = line.strip().split('\t')
-                data[0] = str(data[0])
-                data[1] = int(data[1])  
-                data[2] = float(data[2])  
-                data[3] = float(data[3]) 
-                tiltmeter_data_list.append(TiltmeterData(*data))
+                if len(data) == 4:
+                    data[0] = str(data[0])
+                    data[1] = int(data[1])  
+                    data[2] = float(data[2])  
+                    data[3] = float(data[3]) 
+                    tiltmeter_data_list.append(TiltmeterData(*data))
 
         return tiltmeter_data_list
 
+    @classmethod
+    @CommonDecorator.log_function_call
+    def from_file_with_date(cls, file_path: str, date: str) -> List['TiltmeterData']:
+        """
+        数据读取 129904 24.2381s
+        效率 5361个/s
+        8757913 356.5892s (有判断的)
+        """
+        tiltmeter_data_list: List['TiltmeterData'] = []
+        with open(file_path, 'r') as file:
+            next(file)  # Skip the header row
+            for line in file:
+                data = line.strip().split('\t')
+                if len(data) == 4:
+                    data[0] = str(data[0])
+                    data[1] = int(data[1])  
+                    data[2] = float(data[2])  
+                    data[3] = float(data[3]) 
+                    try:
+                        time = datetime.strptime(data[0], '%Y-%m-%d %H:%M:%S.%f')  # 尝试包含毫秒部分的格式
+                    except ValueError:
+                        time = datetime.strptime(data[0], '%Y-%m-%d %H:%M:%S')  # 失败时尝试不包含毫秒部分的格式
+                    if time.strftime('%Y-%m-%d') == date:
+                        tiltmeter_data_list.append(TiltmeterData(*data))
+
+        return tiltmeter_data_list
+    def from_file_return_dict(file_path: str) -> Dict[datetime.date, list['TiltmeterData']]:
+        tiltmeter_data_dict: Dict[datetime.date, 'TiltmeterData'] = defaultdict(list)
+        with open(file_path, 'r') as file:
+            next(file)  # Skip the header row
+            for line in file:
+                data = line.strip().split('\t')
+                if len(data) == 4:
+                    try:
+                        date = datetime.strptime(data[0], '%Y-%m-%d %H:%M:%S.%f').date()
+                    except ValueError:
+                        date = datetime.strptime(data[0], '%Y-%m-%d %H:%M:%S').date()
+                    data[0] = str(data[0])
+                    data[1] = int(data[1])
+                    data[2] = float(data[2])
+                    data[3] = float(data[3])
+                    tiltmeter_data = TiltmeterData(*data)  # Skip the date in data[0]
+                    tiltmeter_data_dict[date].append(tiltmeter_data)
+
+        return tiltmeter_data_dict
+    
+
+    def from_file_return_dict_in_hour_range(file_path: str) -> Dict[datetime.date, List['TiltmeterData']]:
+        tiltmeter_data_dict: Dict[datetime.date, List[TiltmeterData]] = defaultdict(list)
+        with open(file_path, 'r') as file:
+            next(file)  # Skip the header row
+            for line in file:
+                data = line.strip().split('\t')
+                if len(data) == 4:
+                    try:
+                        date = datetime.strptime(data[0], '%Y-%m-%d %H:%M:%S.%f').date()
+                    except ValueError:
+                        try:
+                            date = datetime.strptime(data[0], '%Y-%m-%d %H:%M:%S').date()
+                        except ValueError as e:
+                            print(f"Error parsing date from line '{line}': {e}")
+                            continue
+
+                    # Check if hour (%H) is 20, 21, 22, or 23
+                    hour = int(data[0].split()[1].split(':')[0])
+                    if hour in [20, 21, 22, 23]:
+                        data[1] = int(data[1])
+                        data[2] = float(data[2])
+                        data[3] = float(data[3])
+                        tiltmeter_data = TiltmeterData(*data[1:])  # Skip the date in data[0]
+                        tiltmeter_data_dict[date].append(tiltmeter_data)
+        return tiltmeter_data_dict
+
+
+ 
     @classmethod
     def filter_by_date(cls, tiltmeter_data_list: List['TiltmeterData'], date: str) -> List['TiltmeterData']:
         filtered_data: List['TiltmeterData'] = [data for data in tiltmeter_data_list if data.time.strftime('%Y-%m-%d') == date]
@@ -106,6 +184,54 @@ class TiltmeterData:
         plt.gca().xaxis.set_major_locator(date_locator)
         plt.yticks(plt.yticks()[0][::len(plt.yticks()[0]) // 5])  # 设置 y 轴刻度为五个
 
+        # 绘制 roll 时序图
+        plt.subplot(2, 1, 2)
+        plt.plot(time_list, roll_data, color='green')
+        plt.title('时间轴上的横滚角变化')
+        plt.xlabel('日期')
+        plt.ylabel('横滚角')
+        plt.gca().xaxis.set_major_formatter(date_fmt)
+        plt.gca().xaxis.set_major_locator(date_locator)
+        plt.yticks(plt.yticks()[0][::len(plt.yticks()[0]) // 5])  # 设置 y 轴刻度为五个
+
+        plt.tight_layout(pad=3.0)  # 调整子图布局以防止重叠，并设置较大的pad值以确保y轴标签不会被截断
+        plt.show()
+
+
+    @classmethod
+    def plot_tiltmeter_data_with_marker(cls, tiltmeter_data_list: List['TiltmeterData']):
+        # 提取 pitch 和 roll 数据以及时间数据
+        pitch_data = [data.pitch for data in tiltmeter_data_list]
+        roll_data = [data.roll for data in tiltmeter_data_list]
+        time_list = [data.time for data in tiltmeter_data_list]
+
+        # 创建两个子图
+        plt.figure(figsize=(14.4, 9))
+
+        # 设置日期格式化器和日期刻度定位器
+        date_fmt = mdates.DateFormatter("%m-%d:%H")  # 仅显示月-日-时
+        date_locator = mdates.AutoDateLocator()  # 自动选择刻度间隔
+
+        # 绘制 pitch 时序图
+        plt.subplot(2, 1, 1)
+        plt.plot(time_list, pitch_data, color='blue')
+        plt.title('时间轴上的俯仰角变化')
+        plt.xlabel('日期')
+        plt.ylabel('俯仰角')
+        plt.gca().xaxis.set_major_formatter(date_fmt)
+        plt.gca().xaxis.set_major_locator(date_locator)
+        plt.yticks(plt.yticks()[0][::len(plt.yticks()[0]) // 5])  # 设置 y 轴刻度为五个
+
+        # 在图上标记特殊时间点
+        special_times = ['2023-08-10 08:12', '2023-08-10 13:48']
+        special_idx = []
+        for time_str in special_times:
+            special_time_dt = datetime.strptime(time_str, '%Y-%m-%d %H:%M')
+            for idx,dt in enumerate(time_list):
+                if dt.minute == special_time_dt.minute and dt.hour == special_time_dt.hour:
+                    special_idx.append(idx)
+        for idx in special_idx:
+            plt.scatter(time_list[idx], pitch_data[idx], color='red', s=10, marker='x')
         # 绘制 roll 时序图
         plt.subplot(2, 1, 2)
         plt.plot(time_list, roll_data, color='green')
@@ -161,6 +287,11 @@ class TiltmeterData:
         # 根据振动幅度的大小识别不同部分
         non_vibration_indices = np.where(np.array(vibration_magnitude) <= threshold)[0]
         vibration_indices = np.where(np.array(vibration_magnitude) > threshold)[0]
+        
+        # 打印第一个振动索引对应的时间
+        if vibration_indices.size > 0:
+            idx = vibration_indices[0]
+            print(f"第一个振动索引为 {idx} 对应的时间为 {time_list[idx]}")
 
         # 可视化结果
         plt.figure(figsize=(10, 6))
@@ -320,6 +451,51 @@ class TiltmeterData:
             normalized_data_list.append(TiltmeterData(data.time, data.station_id, normalized_pitch, normalized_roll))
 
         return normalized_data_list
+    
+    @classmethod
+    def get_all_dates(cls, tiltmeter_data_list: List['TiltmeterData']) -> Set[str]:
+        all_dates: Set[str] = set()
+        for data in tiltmeter_data_list:
+            date_str = data.time.strftime('%Y-%m-%d')
+            all_dates.add(date_str)
+        return all_dates
+    
+    @classmethod
+    def filter_by_time_range(cls, tiltmeter_data_list: List['TiltmeterData'], list_hour: list[int]) -> List['TiltmeterData']:
+        """
+        根据时间范围过滤数据，筛选出时间在特定小时范围内的数据。
+        """
+        filtered_data: List['TiltmeterData'] = []
+        for data in tiltmeter_data_list:
+            data_time = data.time
+            if data_time.hour in list_hour:
+                filtered_data.append(data)
+        return filtered_data
+    
+    @classmethod
+    def calculate_daily_average(cls, tiltmeter_data_list: List['TiltmeterData'], date: str) -> tuple:
+        filtered_data = cls.filter_by_date(tiltmeter_data_list, date)
+        if not filtered_data:
+            return (0.0, 0.0)  # Return (0.0, 0.0) if no data for the given date
+
+        num_data_points = len(filtered_data)
+        total_pitch = sum(data.pitch for data in filtered_data)
+        total_roll = sum(data.roll for data in filtered_data)
+
+        average_pitch = total_pitch / num_data_points
+        average_roll = total_roll / num_data_points
+
+        return (average_pitch, average_roll)
+    
+    @classmethod
+    def save_filtered_data_to_file(cls, tiltmeter_data_list: List['TiltmeterData'], file_path: str) -> None:
+        """
+        将过滤后的数据保存到文件。
+        """
+        with open(file_path, 'w') as file:
+            for data in tiltmeter_data_list:
+                file.write(f"{data.time.strftime('%Y-%m-%d %H:%M:%S.%f')}\t{data.station_id}\t{data.pitch}\t{data.roll}\n")
+
 class GgkxData:
     def __init__(self, time: str, station_id: int, receiver_id: int, latitude: float, longitude: float, geo_height: float, fix_mode: int, satellite_num: int, pdop: float, sigma_e: float, sigma_n: float, sigma_u: float, prop_age: float):
         self.time = datetime.strptime(time, '%Y-%m-%d %H:%M:%S')
@@ -485,6 +661,51 @@ class GgkxData:
             )
             ggkx_data_with_coords_list.append(ggkx_data_with_coords)
         return ggkx_data_with_coords_list
+
+class TiltmeterDataAvage:
+    def __init__(self,pitch: float, roll: float, num: int):
+        self.pitch = pitch
+        self.roll = roll
+        self.num = num
+
+
+    @classmethod
+    def calculate_average(cls, tiltmeter_data_list: List[TiltmeterData]) -> 'TiltmeterDataAvage':
+        total_pitch = sum(data.pitch for data in tiltmeter_data_list)
+        total_roll = sum(data.roll for data in tiltmeter_data_list)
+        num_samples = len(tiltmeter_data_list)
+        
+        if num_samples > 0:
+            pitch_avg = total_pitch / num_samples
+            roll_avg = total_roll / num_samples
+        else:
+            pitch_avg = 0.0
+            roll_avg = 0.0
+        
+        return cls(pitch_avg, roll_avg, num_samples)
+    
+    def read_tiltmeter_data(file_path: str) -> Dict[datetime.date, List['TiltmeterDataAvage']]:
+        tiltmeter_data = {}
+
+        with open(file_path, 'r') as f:
+            lines = f.readlines()
+
+            for line in lines:
+                if line.strip():  # Ensure line is not empty
+                    if line.startswith('日期: '):  # Skip headers or any other specific formatting
+                        continue
+
+                    parts = line.strip().split('\t')
+                    if len(parts) == 4:
+                        try:
+                            date_obj = datetime.strptime(parts[0], '%Y-%m-%d').date()
+                            pitch = float(parts[1])
+                            roll = float(parts[2])
+                            num = int(parts[3])
+                            tiltmeter_data[date_obj] = TiltmeterDataAvage(pitch, roll, num)
+                        except ValueError:
+                            print(f"Issue parsing line: {line}")
+        return tiltmeter_data
 
 class GgkxDataWithCoordinates:
     def __init__(self, time: str, station_id: int, receiver_id: int, east_coordinate: float, north_coordinate: float, geo_height: float, fix_mode: int, satellite_num: int, pdop: float, sigma_e: float, sigma_n: float, sigma_u: float, prop_age: float):
@@ -839,9 +1060,12 @@ def run_main1():
 
 
 def run_main2():
-    data_file: str = rf"C:\Users\Jayttle\Desktop\ggkx_8m.txt"
+    data_file: str = rf"C:\Users\Jayttle\Desktop\20230704\ggkx_R031_2023-7-4.txt"
     ggkx_data: List[GgkxData] = GgkxData.read_ggkx_data(data_file)
-    GgkxData.filter_data_to_files_in_specified_date(ggkx_data, r'C:\Users\Jayttle\Desktop\temp', '2023-8-12')
+    ggkx_coordinate_list = GgkxData.convert_to_coordinates(ggkx_data)
+    output_folder = rf"C:\Users\Jayttle\Desktop\output_data"
+    GgkxDataWithCoordinates.filter_data_to_files_with_coordinates(ggkx_coordinate_list, output_folder, '20230811')
+    # GgkxData.filter_data_to_files_in_specified_date(ggkx_data, r'C:\Users\Jayttle\Desktop\20230704', '2023-7-4')
 
 def run_main3():
     to_process_folder_list = ['0107', '0814', '1521', '2228', '2904']
@@ -911,32 +1135,50 @@ def day_of_year(year, month, day):
     # 打印结果
     print(f"The day {date_obj} is the {day_of_year}th day of the year {year}.")
 
+
+def calculate_average_per_day(tiltmeter_data_dict: Dict[datetime.date, List[TiltmeterData]]) -> Dict[datetime.date, TiltmeterDataAvage]:
+    avg_dict: Dict[datetime.date, TiltmeterDataAvage] = {}
+    for date_obj, data_list in tiltmeter_data_dict.items():
+        avg_data = TiltmeterDataAvage.calculate_average(data_list)
+        avg_dict[date_obj] = avg_data
+    
+    return avg_dict
+
+
 def run_main6():
-    data_file = r"C:\Users\Jayttle\Desktop\tiltmeter_0707_0710.txt"
-    tiltmeter_data_list = TiltmeterData.from_file(data_file)
-    # iltmeterData.plot_tiltmeter_data(tiltmeter_data_list)
-    # normalized_data_list = TiltmeterData.normalize_tiltmeter_data(tiltmeter_data_list)
-    TiltmeterData.plot_tiltmeter_data_in_specified_date_with_vibration_detection(tiltmeter_data_list, "2023-07-09")
+    data_file = r"D:\Program Files (x86)\Software\OneDrive\PyPackages\tiltmeter20230811"
+    tiltmeter_data_list = TiltmeterData.from_file_with_date(data_file, '2023-08-11')
+    # tiltmeter_data_dict: Dict[datetime.date, List['TiltmeterDataAvage']] = TiltmeterDataAvage.read_tiltmeter_data(data_file)
+    list_pitch = []
+    list_roll = []
+    list_time = []
+    for data in tiltmeter_data_list:
+        list_pitch.append(data.pitch)
+        list_roll.append(data.roll)
+        list_time.append(data.time)
+    # for date_obj, avg_data in tiltmeter_data_dict.items(): 
+    #     # print(f"日期: {date_obj}, Pitch 平均值: {avg_data.pitch}, Roll 平均值: {avg_data.roll}, 样本数量: {avg_data.num}")
+    #     list_pitch.append(avg_data.pitch)
+    #     list_roll.append(avg_data.roll)
+    # LFDM.plot_ListFloat_with_time(ListFloat=list_pitch, ListTime=list_time, isShow=True, title="pitch")
+    TiltmeterData.plot_tiltmeter_data_with_vibration_detection(ListFloat=list_pitch, ListTime=list_time, isShow=True, title="pitch")
+    # LFDM.plot_ListFloat_with_time_roll(ListFloat=list_roll, ListTime=list_time, isShow=True, title="roll")
+    # TiltmeterData.plot_tiltmeter_data_in_specified_date_with_vibration_detection(tiltmeter_data_list, '2023-08-11')
+    # TiltmeterData.plot_tiltmeter_data_with_marker(tiltmeter_data_list)
+    # TiltmeterData.plot_tiltmeter_data_with_vibration_detection(tiltmeter_data_list, '2023-08-10')
 
-    # # 初始化最大值和最小值为第一个数据点的值
-    # min_pitch = tiltmeter_data_list[0].pitch
-    # max_pitch = tiltmeter_data_list[0].pitch
-    # min_roll = tiltmeter_data_list[0].roll
-    # max_roll = tiltmeter_data_list[0].roll
-
-    # # 遍历数据列表，找到最大最小值
-    # for data_point in tiltmeter_data_list:
-    #     min_pitch = min(min_pitch, data_point.pitch)
-    #     max_pitch = max(max_pitch, data_point.pitch)
-    #     min_roll = min(min_roll, data_point.roll)
-    #     max_roll = max(max_roll, data_point.roll)
-
-    # # 打印最大最小值
-    # print("Pitch 最小值:", min_pitch)
-    # print("Pitch 最大值:", max_pitch)
-    # print("Roll 最小值:", min_roll)
-    # print("Roll 最大值:", max_roll)
-
+def run_main7():
+    data_file = r"C:\Users\Jayttle\Desktop\tianmeng_tiltmeter.txt"
+    tiltmeter_data_dict = TiltmeterData.from_file_return_dict_in_hour_range(data_file)
+    avg_dict = calculate_average_per_day(tiltmeter_data_dict)
+    file_path = 'tiltmeter1215.txt'
+    with open(file_path, 'w') as file:
+        for key, data in avg_dict.items():
+            file.write(f"{key}\t{data.pitch}\t{data.roll}\t{data.num}\n")
 if __name__ == "__main__":
     print("---------------------run-------------------")
-    run_main6()
+    run_main7()
+
+#TODO: 1.用平均值的横滚角和俯仰角来表示索道支架姿态
+#TODO：2.绘制曲线和相关系数表示环境数据和
+    

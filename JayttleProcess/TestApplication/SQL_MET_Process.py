@@ -5,11 +5,13 @@ import json
 import chardet
 import pyproj
 import numpy as np
+from scipy.stats import pearsonr, skew, kurtosis
 from datetime import datetime, timedelta
 from itertools import groupby
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from operator import attrgetter
+from scipy import interpolate
 from scipy.stats import pearsonr, chi2_contingency
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics import mean_squared_error, mean_absolute_error
@@ -611,19 +613,27 @@ def find_met_data_by_date(met_data: List[Met], dates: List[str]) -> List[Met]:
     return filtered_met_data
 
 
-def plot_data_with_datetimes(value: List[float], datetimes:List[datetime], color='blue'):
-    plt.figure(figsize=(14.4, 9.6))
-
+def plot_data_with_datetimes(value: List[float], datetimes:List[datetime], data_type: str):
+    plt.figure(figsize=(6, 4))
+    color='black'
     # 设置日期格式化器和日期刻度定位器
-    date_fmt = mdates.DateFormatter("%m-%d:%H")  # 仅显示月-日-时
+    date_fmt = mdates.DateFormatter("%H:00")  # 仅显示月-日-时
     date_locator = mdates.AutoDateLocator()  # 自动选择刻度间隔
 
-    plt.xlabel('日期')
-    plt.ylabel('数值-m/s')
-    plt.title('风速')
+    # 隐藏右边框和上边框
+    ax = plt.gca()
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+
+    plt.xlabel('2023年8月10日气象仪数据', fontproperties='SimSun', fontsize=10)
+    plt.ylabel(f'{data_type}', fontproperties='SimSun', fontsize=10)
 
     plt.gca().xaxis.set_major_formatter(date_fmt)
     plt.gca().xaxis.set_major_locator(date_locator)
+
+    # 设置刻度朝向内部，并调整刻度与坐标轴的距离
+    ax.tick_params(axis='x', direction='in', pad=10)  # pad 参数用于控制刻度与坐标轴的距离
+    ax.tick_params(axis='y', direction='in', pad=10)
     # 绘制折线图，根据阈值连接或不连接线段，并使用不同颜色
     prev_datetime = None
     prev_value = None
@@ -640,9 +650,96 @@ def plot_data_with_datetimes(value: List[float], datetimes:List[datetime], color
         prev_value = value
         prev_month = month
 
-    plt.legend()
+    # 调整底部边界向上移动一点
+    plt.subplots_adjust(bottom=0.15)
     plt.show()
     # 显示图形
+
+def detailed_compare_lists(ListFloat1, ListFloat2):
+    assert len(ListFloat1) == len(ListFloat2), "列表长度不一致"
+
+    # 逐元素比较
+    differences = []
+    num_differences = 0
+    for a, b in zip(ListFloat1, ListFloat2):
+        if a != b:
+            num_differences += 1
+            differences.append(abs(a - b))
+
+    print(f"总共有 {num_differences} 处不同。")
+
+    # 差异分析
+    if differences:
+        print(f"平均差异: {np.mean(differences):.2f}")
+        print(f"最大差异: {max(differences):.2f}")
+        print(f"最小差异: {min(differences):.2f}")
+        print(f"差异标准差: {np.std(differences):.2f}")
+        print(f"差异中位数: {np.median(differences):.2f}")
+    else:
+        print("两个列表完全相同。")
+
+    # 相关性分析
+    correlation_coefficient, p_value = pearsonr(ListFloat1, ListFloat2)
+    print(f"相关系数 (Pearson): {correlation_coefficient:.2f}")
+    print(f"P值: {p_value:.4f} (P值小说明相关性显著)")
+
+    # 统计分析
+    print(f"ListFloat1 偏度: {skew(ListFloat1):.2f}, 峰度: {kurtosis(ListFloat1):.2f}")
+    print(f"ListFloat2 偏度: {skew(ListFloat2):.2f}, 峰度: {kurtosis(ListFloat2):.2f}")
+
+    # 排序后比较
+    if sorted(ListFloat1) == sorted(ListFloat2):
+        print("排序后两个列表相同。")
+    else:
+        print("排序后两个列表不同。")
+
+    # 绘制直方图和箱型图
+    plt.figure(figsize=(12, 6))
+
+    plt.subplot(121)
+    plt.hist(ListFloat1, bins=20, alpha=0.7, label='ListFloat1')
+    plt.hist(ListFloat2, bins=20, alpha=0.7, label='ListFloat2')
+    plt.title("直方图比较")
+    plt.legend()
+
+    plt.subplot(122)
+    plt.boxplot([ListFloat1, ListFloat2], labels=['ListFloat1', 'ListFloat2'])
+    plt.title("箱型图比较")
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_data_with_datetimes_in_linspace(value: List[float], datetimes: List[datetime], data_type: str):
+    plt.figure(figsize=(6, 4))
+    color = 'black'
+    
+    # 设置日期格式化器和日期刻度定位器
+    date_fmt = mdates.DateFormatter("%H:00")  # 仅显示时:分
+    date_locator = mdates.AutoDateLocator()  # 自动选择刻度间隔
+
+    # 隐藏右边框和上边框
+    ax = plt.gca()
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+
+    plt.xlabel('2023年8月11日气象仪数据', fontproperties='SimSun', fontsize=10)
+    plt.ylabel(f'{data_type}', fontproperties='SimSun', fontsize=10)
+
+    plt.gca().xaxis.set_major_formatter(date_fmt)
+    plt.gca().xaxis.set_major_locator(date_locator)
+
+    # 设置刻度朝向内部，并调整刻度与坐标轴的距离
+    ax.tick_params(axis='x', direction='in', pad=10)
+    ax.tick_params(axis='y', direction='in', pad=10)
+
+
+    plt.plot(datetimes, value, linestyle='-', color=color)
+    # 设置图形标题
+    plt.title(f'{data_type}随时间变化图', fontproperties='SimSun', fontsize=12)
+    # 调整底部边界向上移动一点
+    plt.subplots_adjust(bottom=0.15)
+    plt.show()
+
 
 def plot_data_with_datetimes_interp1d(value: List[float], datetimes: List[datetime], color='blue'):
     plt.figure(figsize=(14.4, 9.6))
@@ -692,7 +789,7 @@ def check_target_date_met():
     # dates_to_check = ["2023-03-12", "2023-04-10", "2023-05-16","2023-06-06" ,"2023-07-07", "2023-07-09", "2023-08-11", "2023-10-31"]
     # ates_to_check = ["2023-08-08","2023-08-09","2023-08-10","2023-08-11","2023-08-12","2023-08-13","2023-08-14"]
     # dates_to_check = ["2023-08-10","2023-08-11","2023-08-12"]
-    dates_to_check = ["2023-10-29","2023-10-30","2023-10-31","2023-11-01","2023-11-02"]
+    dates_to_check = ["2023-08-11"]
     input_file_path: str = r"C:\Users\Jayttle\Desktop\tianmeng_met.txt"
     met_data: List[Met] = read_time_series_data(input_file_path)
     met_data.sort(key=attrgetter('datetime_obj'))
@@ -703,6 +800,12 @@ def check_target_date_met():
     tempuare_list = [data.temperature for data in filtered_met_data]
     wind_list = [data.wind_speed for data in filtered_met_data]
     
+    
+    # Remove values > 30 and replace them with None
+    for idx, value in enumerate(wind_list):
+        if value > 15:
+            wind_list[idx] = None
+
 
     file_path = r"D:\Program Files (x86)\Software\OneDrive\PyPackages_DataSave\weather_temperature.txt"   
     # Read weather data
@@ -710,9 +813,12 @@ def check_target_date_met():
 
     #TODO: weather_data 是一天一个数据的不知道怎么进行对比
 
-    plot_data_with_datetimes(wind_list, time_list)
+    plot_data_with_datetimes_in_linspace(wind_list, time_list, '风速(m/s)')
+    plot_data_with_datetimes_in_linspace(humidness_list, time_list, '湿度(%)')
+    plot_data_with_datetimes_in_linspace(tempuare_list, time_list, '温度(℃)')
+    
 if __name__ == "__main__":
     print("---------------------run-------------------")
-    run_compare_temperature()
+    check_target_date_met()
 
 
