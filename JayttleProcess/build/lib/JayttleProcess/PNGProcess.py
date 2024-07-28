@@ -25,7 +25,7 @@ def convert_to_grayscale(input_image_path, output_image_path):
 
 if __name__ =='__main__':
     # 示例用法：
-    input_png = r"C:\Users\Jayttle\Desktop\微信图片_20240615194307.png"
+    input_png = r"D:\Program Files (x86)\Software\OneDrive\PyPackages_img\索道坐标图_1.png"
     output_gray_png = 'output_gray.png'
 
     convert_to_grayscale(input_png, output_gray_png)

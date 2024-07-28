@@ -12,6 +12,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+import matplotlib.ticker as ticker
 import statsmodels.api as sm
 from collections import defaultdict
 from statsmodels.tsa.arima.model import ARIMA
@@ -22,7 +23,7 @@ from sklearn.linear_model import Ridge , Lasso, LassoCV, ElasticNet, LinearRegre
 from sklearn.metrics import root_mean_squared_error, mean_absolute_error, r2_score, mean_squared_error, silhouette_score, davies_bouldin_score, calinski_harabasz_score, v_measure_score
 from sklearn.ensemble import IsolationForest
 from sklearn.neighbors import LocalOutlierFactor, NearestNeighbors
-from sklearn.preprocessing import PolynomialFeatures, StandardScaler
+from sklearn.preprocessing import PolynomialFeatures, StandardScaler, MinMaxScaler
 from sklearn.pipeline import make_pipeline
 from sklearn.mixture import GaussianMixture
 from sklearn.svm import OneClassSVM
@@ -30,7 +31,7 @@ from sklearn.model_selection import GridSearchCV, cross_val_score
 from scipy.spatial.distance import euclidean
 from scipy import signal, fft
 from scipy.cluster import hierarchy
-from scipy.stats import t, shapiro, pearsonr, f_oneway, gaussian_kde
+from scipy.stats import t, shapiro, pearsonr, f_oneway, gaussian_kde, spearmanr, kendalltau
 from scipy.signal import hilbert, find_peaks
 from PyEMD import EMD, EEMD, CEEMDAN
 from typing import List, Optional, Tuple, Union
@@ -96,38 +97,316 @@ def plot_ListFloat(ListFloat: list[float], isShow: bool = False, SaveFilePath: O
         plt.show()
     plt.close()
 
-def plot_points(x_points: list[float], y_points: list[float], title: str = None):
-    # plt.rcParams['axes.spines.top'] = False
-    # plt.rcParams['axes.spines.right'] = False
-    # plt.rcParams['axes.spines.bottom'] = False
-    # plt.rcParams['axes.spines.left'] = False
-    plt.figure(figsize=(14.4, 9.6))  # 设置图的大小，单位是英寸
+
+def plot_ListFloat_with_time_pitch(ListFloat: List[float], ListTime: List[datetime], isShow: bool = True, SaveFilePath: Optional[str] = None, title: str = None) -> None:
+    """绘制 ListFloat 对象的时间序列图"""
+    values = ListFloat
+    datetimes = ListTime  # 使用数据长度生成简单的序号作为 x 轴
+
+    plt.figure(figsize=(6, 4))  # 设置图的大小，单位是英寸
+
+    # 隐藏右边框和上边框
+    ax = plt.gca()
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+    plt.xlabel('2023年8月11日倾斜仪数据', fontsize=12)  # 可以省略 fontproperties
+    plt.ylabel('俯仰角/°', fontsize=12)  # 可以省略 fontproperties
+
+    # 设置日期格式化器和日期刻度定位器
+    date_fmt = mdates.DateFormatter("%H:00")  # 仅显示小时和分钟
+    date_locator = mdates.AutoDateLocator()  # 自动选择刻度间隔
+    plt.gca().xaxis.set_major_formatter(date_fmt)
+    plt.gca().xaxis.set_major_locator(date_locator)
+
+    # 设置刻度朝向内部，并调整刻度与坐标轴的距离
+    ax.tick_params(axis='x', direction='in', pad=10)
+    ax.tick_params(axis='y', direction='in', pad=10)
+
+
+    # 设置刻度格式化器，确保正负号显示正确
+    ax.yaxis.set_major_formatter(ticker.FuncFormatter(lambda y, _: f'{y:.2f}'))
+
+    # 调整底部边界向上移动一点
+    plt.subplots_adjust(bottom=0.15)
+    plt.subplots_adjust(left=0.15)
+
+
+    # 绘制线条，设置颜色为黑色
+    plt.plot(datetimes, values, color='black')
+    # 设置保存或显示图形
+    if SaveFilePath is not None:
+        plt.savefig(SaveFilePath)
+    elif isShow:
+        plt.show()
+
+    plt.close()
+
+
+def plot_ListFloat_with_time_roll(ListFloat: List[float], ListTime: List[datetime], isShow: bool = True, SaveFilePath: Optional[str] = None, title: str = None) -> None:
+    """绘制 ListFloat 对象的时间序列图"""
+    values = ListFloat
+    datetimes = ListTime  # 使用数据长度生成简单的序号作为 x 轴
+
+    plt.figure(figsize=(6, 4))  # 设置图的大小，单位是英寸
+
+    # 隐藏右边框和上边框
+    ax = plt.gca()
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+    plt.xlabel('2023年8月11日倾斜仪数据', fontsize=12)  # 可以省略 fontproperties
+    plt.ylabel('横滚角/°', fontsize=12)  # 可以省略 fontproperties
+
+    # 设置日期格式化器和日期刻度定位器
+    date_fmt = mdates.DateFormatter("%H:00")  # 仅显示小时和分钟
+    date_locator = mdates.AutoDateLocator()  # 自动选择刻度间隔
+    plt.gca().xaxis.set_major_formatter(date_fmt)
+    plt.gca().xaxis.set_major_locator(date_locator)
+
+    # 设置刻度朝向内部，并调整刻度与坐标轴的距离
+    ax.tick_params(axis='x', direction='in', pad=10)
+    ax.tick_params(axis='y', direction='in', pad=10)
+
+
+    # 设置刻度格式化器，确保正负号显示正确
+    ax.yaxis.set_major_formatter(ticker.FuncFormatter(lambda y, _: f'{y:.2f}'))
+
+    # 调整底部边界向上移动一点
+    plt.subplots_adjust(bottom=0.15)
+    plt.subplots_adjust(left=0.15)
+
+
+    # 绘制线条，设置颜色为黑色
+    plt.plot(datetimes, values, color='black')
+    # 设置保存或显示图形
+    if SaveFilePath is not None:
+        plt.savefig(SaveFilePath)
+    elif isShow:
+        plt.show()
+
+    plt.close()
+
+
+def plot_points(x_points, y_points, title=None):
+    # Convert lists to numpy arrays
+    y_points = np.array(y_points)
+    
+    plt.figure(figsize=(9, 6))  # 设置图的大小，单位是英寸
     
     # 绘制散点图
     plt.scatter(x_points, y_points)
+    plt.xlabel('索道坐标X(mm)')  # 设置x轴标签
+    plt.ylabel('索道坐标Y(mm)')  # 设置y轴标签
     
-    # 绘制x轴和y轴
-    axhline = plt.axhline(0, color='black', linewidth=1, zorder=1)  # 绘制x轴，黑色，线宽2，zorder设置在最上层
-    axvline = plt.axvline(0, color='black', linewidth=1, zorder=1)  # 绘制y轴，黑色，线宽2，zorder设置在最上层
-    
-    # 设置x轴和y轴的刻度放置方式为直接放在轴上
-    plt.tick_params(axis='x', direction='in')
-    plt.tick_params(axis='y', direction='in')
-    
-    plt.xlabel('X')  # 设置x轴标签
-    plt.ylabel('Y')  # 设置y轴标签
-    
-    if title is None:
-        plt.title('时间序列数据')  # 设置标题，默认为'时间序列数据'
-    else:
-        plt.title(title)  # 设置标题为传入的参数title
-    
-    # 获取当前的坐标轴对象
+    # 隐藏右边框和上边框
     ax = plt.gca()
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+    ax.spines['bottom'].set_visible(False)  # 隐藏下边框
+    ax.spines['left'].set_visible(False)    # 隐藏左边框
     
-    # 手动设置刻度标签的位置
-    ax.xaxis.set_label_coords(.02, 0.5)  # 设置x轴标签的位置
-    ax.yaxis.set_label_coords(0.5, 1.02)  # 设置y轴标签的位置
+    # 添加箭头，指向坐标轴的正方向
+    ax.annotate('', xy=(1, 0.001), xytext=(0, 0.001),
+                arrowprops=dict(arrowstyle='->', lw=1, color='black'),
+                xycoords='axes fraction', textcoords='axes fraction')
+    ax.annotate('', xy=(0.001, 1), xytext=(0.001, 0),
+                arrowprops=dict(arrowstyle='->', lw=1, color='black'),
+                xycoords='axes fraction', textcoords='axes fraction')
+    
+    # 设置刻度朝向内部，并调整刻度与坐标轴的距离
+    ax.tick_params(axis='x', direction='in', pad=10)  # pad 参数用于控制刻度与坐标轴的距离
+    ax.tick_params(axis='y', direction='in', pad=10)
+    
+    # 设置标题
+    if title is None:
+        plt.suptitle('时间序列数据', y=0.0)  # 设置标题，默认为'时间序列数据'，y参数用于调整标题在垂直方向上的位置
+    else:
+        plt.suptitle(title, y=0.0)  # 设置标题为传入的参数title，y参数用于调整标题在垂直方向上的位置
+    
+    plt.tight_layout()  # 自动调整子图间的间距和标签位置
+    plt.show()
+
+
+def plot_ListFloat_x(ListFloat: list[float], isShow: bool = True, SaveFilePath: Optional[str] = None, title: str = None) -> None:
+    """绘制 ListFloat 对象的时间序列图"""
+    values = ListFloat
+    datetimes = range(len(ListFloat))  # 使用数据长度生成简单的序号作为 x 轴
+
+    plt.figure(figsize=(6, 4))  # 设置图的大小，单位是英寸
+
+    # 隐藏右边框和上边框
+    ax = plt.gca()
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+    plt.xlabel('数据期数/期', fontproperties='SimSun', fontsize=12)  # 设置字体为宋体
+    plt.ylabel('索道坐标x轴方向位移监测/m', fontproperties='SimSun', fontsize=12)  # 设置字体为宋体
+
+    # 设置最大显示的刻度数
+    plt.tight_layout()  # 自动调整子图间的间距和标签位置
+    # 设置刻度朝向内部，并调整刻度与坐标轴的距离
+    ax.tick_params(axis='x', direction='in', pad=10)  # pad 参数用于控制刻度与坐标轴的距离
+    ax.tick_params(axis='y', direction='in', pad=10)
+    
+    # 绘制线条和散点，设置颜色为黑色
+    plt.plot(datetimes, values, color='black')
+    plt.scatter(datetimes, values, s=10, color='black')
+
+    if SaveFilePath is not None:
+        plt.savefig(SaveFilePath)
+    elif isShow:
+        plt.show()
+    plt.close()
+
+
+def plot_ListFloat_Compare_without_marker(ListFloat1: list[float], ListFloat2: list[float], to_marker_idx: list[int] = []) -> None:
+    """绘制两个ListFloat对象的时间序列图"""
+    """绘制 ListFloat 对象的时间序列图"""
+    values1 = [value for idx,value in enumerate(ListFloat1) if idx not in to_marker_idx]
+    values2 = [value for idx,value in enumerate(ListFloat2) if idx not in to_marker_idx]
+
+    pearson_corr, spearman_corr, kendall_corr = calculate_similarity(values1,values2)
+    datetimes = range(len(values1))  # 使用数据长度生成简单的序号作为 x 轴
+
+    plt.figure(figsize=(6, 4))  # 设置图的大小，单位是英寸
+
+    # 隐藏右边框和上边框
+    ax = plt.gca()
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+    plt.xlabel('数据期数/期', fontproperties='SimSun', fontsize=12)  # 设置字体为宋体
+    plt.ylabel('索道坐标x轴方向位移监测/m', fontproperties='SimSun', fontsize=12)  # 设置字体为宋体
+
+    # 设置最大显示的刻度数
+    plt.tight_layout()  # 自动调整子图间的间距和标签位置
+    # 设置刻度朝向内部，并调整刻度与坐标轴的距离
+    ax.tick_params(axis='x', direction='in', pad=10)  # pad 参数用于控制刻度与坐标轴的距离
+    ax.tick_params(axis='y', direction='in', pad=10)
+    
+    # 绘制线条和散点，设置颜色为黑色
+    plt.plot(datetimes, values1, color='black')
+    plt.plot(datetimes, values2, color='blue')
+
+    plt.scatter(datetimes, values1, s=10, color='black')
+
+    plt.show()
+    plt.close()
+
+def plot_ListFloat_with_marker(ListFloat: list[float], to_marker_idx: list[int] = []) -> None:
+    """绘制两个ListFloat对象的时间序列图"""
+    """绘制 ListFloat 对象的时间序列图"""
+    """绘制 ListFloat 对象的时间序列图"""
+    values = ListFloat
+    datetimes = range(len(ListFloat))  # 使用数据长度生成简单的序号作为 x 轴
+
+    plt.figure(figsize=(6, 4))  # 设置图的大小，单位是英寸
+
+    # 隐藏右边框和上边框
+    ax = plt.gca()
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+    plt.xlabel('数据期数/期', fontproperties='SimSun', fontsize=12)  # 设置字体为宋体
+    plt.ylabel('索道坐标x轴方向位移监测/m', fontproperties='SimSun', fontsize=12)  # 设置字体为宋体
+
+    # 设置最大显示的刻度数
+    plt.tight_layout()  # 自动调整子图间的间距和标签位置
+    # 设置刻度朝向内部，并调整刻度与坐标轴的距离
+    ax.tick_params(axis='x', direction='in', pad=10)  # pad 参数用于控制刻度与坐标轴的距离
+    ax.tick_params(axis='y', direction='in', pad=10)
+    
+    # 绘制线条和散点，设置颜色为黑色
+    plt.plot(datetimes, values, color='black')
+    for idx in range(len(values)):
+        if idx not in to_marker_idx:
+            plt.scatter(idx, values[idx], s=10, color='black')
+        else:
+            plt.scatter(idx, values[idx], s=10, color='red', marker='x')
+
+    plt.show()
+    plt.close()
+
+
+def plot_ListFloat_y(ListFloat: list[float], isShow: bool = True, SaveFilePath: Optional[str] = None, title: str = None) -> None:
+    """绘制 ListFloat 对象的时间序列图"""
+    values = ListFloat
+    datetimes = range(len(ListFloat))  # 使用数据长度生成简单的序号作为 x 轴
+
+    plt.figure(figsize=(6, 4))  # 设置图的大小，单位是英寸
+
+    # 隐藏右边框和上边框
+    ax = plt.gca()
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+    plt.xlabel('数据期数/期', fontproperties='SimSun', fontsize=12)  # 设置字体为宋体
+    plt.ylabel('索道坐标y轴方向位移监测/m', fontproperties='SimSun', fontsize=12)  # 设置字体为宋体
+
+    # 设置最大显示的刻度数
+    plt.tight_layout()  # 自动调整子图间的间距和标签位置
+    # 设置刻度朝向内部，并调整刻度与坐标轴的距离
+    ax.tick_params(axis='x', direction='in', pad=10)  # pad 参数用于控制刻度与坐标轴的距离
+    ax.tick_params(axis='y', direction='in', pad=10)
+    
+    # 绘制线条和散点，设置颜色为黑色
+    plt.plot(datetimes, values, color='black')
+    plt.scatter(datetimes, values, s=10, color='black')
+
+    if SaveFilePath is not None:
+        plt.savefig(SaveFilePath)
+    elif isShow:
+        plt.show()
+    plt.close()
+
+
+def plot_points_with_markeridx(x_points: list[float], y_points: list[float], title: str = None, to_marker_idx: list[int] = []):
+    # Convert lists to numpy arrays
+    y_points = np.array(y_points)
+    
+    plt.figure(figsize=(6, 4))  # 设置图的大小，单位是英寸
+    plt.xlabel('索道坐标x轴方向位移监测/m')  # 设置x轴标签
+    plt.ylabel('索道坐标y轴方向位移监测/m')  # 设置y轴标签
+    
+    # 绘制正常点的散点图
+    for idx, point in enumerate(x_points):
+        if idx not in to_marker_idx:
+            plt.scatter(x_points[idx], y_points[idx], color='blue', marker='o', s=20)  
+    
+    # 收集异常点的位置
+    exception_points_x = []
+    exception_points_y = []
+    for idx in to_marker_idx:
+        if 0 <= idx < len(x_points) and 0 <= idx < len(y_points):
+            exception_points_x.append(x_points[idx])
+            exception_points_y.append(y_points[idx])
+    
+    # 绘制异常点
+    if exception_points_x and exception_points_y:
+        plt.scatter(exception_points_x, exception_points_y, color='red', marker='x', s=20)
+    
+    # 隐藏右边框和上边框
+    ax = plt.gca()
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+    ax.spines['bottom'].set_visible(False)  # 隐藏下边框
+    ax.spines['left'].set_visible(False)    # 隐藏左边框
+    
+    # 添加箭头，指向坐标轴的正方向
+    ax.annotate('', xy=(1, 0.001), xytext=(0, 0.001),
+                arrowprops=dict(arrowstyle='->', lw=1, color='black'),
+                xycoords='axes fraction', textcoords='axes fraction')
+    ax.annotate('', xy=(0.001, 1), xytext=(0.001, 0),
+                arrowprops=dict(arrowstyle='->', lw=1, color='black'),
+                xycoords='axes fraction', textcoords='axes fraction')
+    
+    # 设置刻度朝向内部，并调整刻度与坐标轴的距离
+    ax.tick_params(axis='x', direction='in', pad=10)  # pad 参数用于控制刻度与坐标轴的距离
+    ax.tick_params(axis='y', direction='in', pad=10)
+    
+    # 设置标题
+    if title is None:
+        plt.suptitle('时间序列数据', y=1.0)  # 设置标题，默认为'时间序列数据'，y参数用于调整标题在垂直方向上的位置
+    else:
+        plt.suptitle(title, y=1.0)  # 设置标题为传入的参数title，y参数用于调整标题在垂直方向上的位置
+    
+    # 手动添加图例
+    # plt.legend(['正常值', '异常值'], loc='upper right')  # 在这里手动指定图例的标签和位置
     
     plt.tight_layout()  # 自动调整子图间的间距和标签位置
     plt.show()
@@ -172,10 +451,11 @@ def plot_points_with_markeridx(x_points: list[float], y_points: list[float], tit
 
 def plot_ListFloat_Compare(ListFloat1: list[float], ListFloat2: list[float], SaveFilePath: Optional[str] = None, title: str = None) -> None:
     """绘制两个ListFloat对象的时间序列图"""
+    calculate_similarity(ListFloat1, ListFloat2)
     # 以个数索引序号为 x 轴
     x_values = range(len(ListFloat1))
     # 修改标签和标题的文本为中文
-    plt.figure(figsize=(14.4, 9.6)) # 单位是英寸
+    plt.figure(figsize=(6, 4)) # 单位是英寸
     plt.xlabel('索引')
     plt.ylabel('数值')
     if title is None:
@@ -200,6 +480,27 @@ def plot_ListFloat_Compare(ListFloat1: list[float], ListFloat2: list[float], Sav
     else:
         plt.show()
     plt.close()
+
+
+def plot_ListFloat_Compare_in_diff_dt(ListFloat1: List[float], dt_list1: List[datetime], ListFloat2: List[float], dt_list2: List[datetime]) -> None:
+    """Plot ListFloat1 and ListFloat2 based on their datetime lists and compute similarity."""
+    aligned_list1 = []
+    aligned_list2 = []
+    
+    idx1 = 0
+    idx2 = 0
+    
+    while idx1 < len(dt_list1) and idx2 < len(dt_list2):
+        if dt_list1[idx1] == dt_list2[idx2]:
+            aligned_list1.append(ListFloat1[idx1])
+            aligned_list2.append(ListFloat2[idx2])
+            idx1 += 1
+            idx2 += 1
+        elif dt_list1[idx1] < dt_list2[idx2]:
+            idx1 += 1
+        else:
+            idx2 += 1
+    plot_ListFloat_Compare(aligned_list1, aligned_list2, title='Comparison of ListFloat1 and ListFloat2')
 
 def plot_ListFloat_with_markeridx(ListFloat: list[float], isShow: bool = False, SaveFilePath: Optional[str] = None, title: str = None, to_marker_idx: list[int] = []) -> None:
     """绘制 ListFloat 对象的时间序列图，并标记指定索引处的数据点"""
@@ -1833,32 +2134,33 @@ def plot_control_limits_ewma(data: list[float], alpha=0.2, SaveFilePath: Optiona
 
 # endregion
 # region scikit-learn使用
-def calculate_similarity(ts1: List[float], ts2: List[float], similarity_metric: str = 'euclidean') -> float:
+def calculate_similarity(ts1: List[float], ts2: List[float]) -> None:
     """
-    计算两个时间序列之间的相似性或差异性
-    
-    Args:
-        ts1 (list or numpy array): 第一个时间序列
-        ts2 (list or numpy array): 第二个时间序列
-        similarity_metric (str, optional): 相似性度量方法,默认为'euclidean'(欧氏距离)。可选值包括'euclidean'(欧氏距离),
-                                            'pearson'(皮尔逊相关系数)。
-    
-    Returns:
-        float: 两个时间序列之间的相似性或差异性值
+    计算并打印两个时间序列之间的皮尔逊、斯皮尔曼和肯德尔相关系数。
+
+    参数:
+    ts1 -- 时间序列1，列表形式的浮点数。
+    ts2 -- 时间序列2，列表形式的浮点数。
     """
-    if similarity_metric == 'euclidean':
-        # 计算欧氏距离
-        similarity = euclidean(ts1, ts2)
-    elif similarity_metric == 'pearson':
-        # 计算皮尔逊相关系数
-        similarity = np.corrcoef(ts1, ts2)[0, 1]
-    else:
-        raise ValueError("不支持的相似性度量方法")
+    # 计算皮尔逊相关系数
+    pearson_corr, _ = pearsonr(ts1, ts2)
+    
+    # 计算斯皮尔曼相关系数
+    spearman_corr, _ = spearmanr(ts1, ts2)
+    
+    # 计算肯德尔相关系数
+    kendall_corr, _ = kendalltau(ts1, ts2)
+    
+    # 打印相关系数
+    print("皮尔逊相关系数:", pearson_corr)
+    print("斯皮尔曼相关系数:", spearman_corr)
+    print("肯德尔相关系数:", kendall_corr)
+    
+    return pearson_corr, spearman_corr, kendall_corr
 
-    return similarity
 
 
-def time_series_clustering(data: List[float], num_clusters: int) -> np.ndarray:
+def clustering_listfloat(data: List[float], num_clusters: int) -> np.ndarray:
     """
     对时间序列数据进行聚类
     
@@ -1887,6 +2189,18 @@ def time_series_clustering(data: List[float], num_clusters: int) -> np.ndarray:
 
 # endregion
 # region 归一化处理
+
+def min_max_normalization(data: List[float]) -> List[float]:
+    """
+    最大值最小值归一化处理。
+
+    :param data: 要归一化的数据，float对象列表。
+    :return: 归一化后的float对象列表。
+    """
+    min_val = min(data)
+    max_val = max(data)
+    normalized_data = [(value - min_val) / (max_val - min_val) for value in data]
+    return normalized_data
 
 
 def decimal_scaling_normalization(data: List[float]) -> List[float]:
@@ -2943,6 +3257,7 @@ def normalize_features(features: np.ndarray) -> np.ndarray:
     return scaled_features
 
 
+
 def detect_lv_dbscan_anomaly(data: list[float], eps: float, min_samples: int, lof_threshold: float) -> None:
     # 将数据转换为NumPy数组
     data_array = np.array(data).reshape(-1, 1)
@@ -3067,8 +3382,17 @@ def detect_knn_anomaly_xy(x_points: list[float], y_points: list[float], k: int =
 
     # 检测异常点
     outliers = np.where(anomaly_scores > threshold)[0]
-
-    return outliers, anomaly_scores, threshold
+    
+    # 打印异常分数的值
+    print("异常分数的值:")
+    for idx in outliers:
+        print(anomaly_scores[idx])
+    
+    # 打印正常值的分数平均值
+    normal_scores_mean = anomaly_scores[np.where(anomaly_scores <= threshold)].mean()
+    print("正常值的分数平均值:", normal_scores_mean)
+    
+    return anomaly_scores, outliers, normal_scores_mean
 
 
 def detect_anomalies_with_ema(data: list[float], alpha: float = 0.1, threshold_factor: float = 2.0) -> tuple[list[tuple[int, float]], np.ndarray]:

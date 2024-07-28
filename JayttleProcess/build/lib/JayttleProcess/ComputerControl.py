@@ -3,6 +3,7 @@ import os
 from PIL import Image 
 import time
 import pytesseract
+import chardet
 
 pytesseract.pytesseract.tesseract_cmd = r'D:\Program Files\Tesseract-OCR\tesseract.exe'
 
@@ -186,6 +187,37 @@ def auto_turn_off():
     move_and_click(592, 1433)#关机
 
 
+def check_data_points(folder_path: str):
+    to_delete_list = []
+    for filename in os.listdir(folder_path):
+        if filename.endswith('.csv'):
+            csv_file_path = os.path.join(folder_path, filename)
+            # 使用 chardet 检测文件编码
+            with open(csv_file_path, 'rb') as file:
+                result = chardet.detect(file.read())
+                encoding = result['encoding']
+            # 使用检测到的编码打开文件
+            with open(csv_file_path, 'r', encoding=encoding) as file:
+                next(file)  # Skip the header row
+                line = next(file)  # Read the second line
+                data = line.strip().split('\t')
+                if len(data) != 30:
+                    print(f"Error:{csv_file_path} got:{len(data)}.")
+                    to_delete_list.append(csv_file_path)
+    for item in to_delete_list:
+        os.remove(item)
+
+def check_in_one_step():
+    to_process_fold_list = [ 'R052_0407','R071_0407', 'R072_0407','R081_0407', 'R082_0407']
+    # to_process_fold_list = [ 'R031_1215',"R032_1215",'R051_1215','R052_1215','R071_1215', 'R081_1215', 'R082_1215']
+    root_csv_path = rf'D:\Program Files (x86)\Software\OneDrive\PyPackages_DataSave\new_data'
+
+    for key in to_process_fold_list:
+        data_save_path = os.path.join(root_csv_path, key)
+        print(f"{key}: {data_save_path}")
+        check_data_points(data_save_path)
+
+
 def TBC_auto_Process(Merge_path , save_path):
     window_region_保存 = (1625, 567, 37, 20)
     window_region_输入= (1590, 950, 35, 16)
@@ -268,5 +300,3 @@ def TBC_auto_Process(Merge_path , save_path):
         move_and_click_with_shift(147, 376) #拖动并点击最后一个文件
         time.sleep(0.5) #等待
         right_click_and_press_D() #删除文件
-
-# TBC_auto_Process()

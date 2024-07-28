@@ -72,7 +72,7 @@ def check_FTP_file() -> None:
                 ftp.cwd(folder_name)  # 切换到对应文件夹
                 folder_files = ftp.nlst()  # 获取文件夹下的文件列表
 
-
+                # 输出文件夹中的文件数量
                 print(f"{folder_name} 文件夹中有 {len(folder_files)} 个文件。")
 
                 # 将文件夹下的文件名逐行保存到本地的 txt 文件中
@@ -103,7 +103,6 @@ def check_FTP_file() -> None:
     finally:
         # 关闭FTP连接
         ftp.quit()
-
 
 def download_files_from_ftp(ftp_config: FTPConfig, 
                             remote_folder: str, 
@@ -196,7 +195,6 @@ def Process_Copy(isFirst: bool,from_copy_merge_folder_list: list[str] , toDownlo
                 # 去除每行末尾的换行符
                 files_to_download = [file.strip() for file in files_to_download]
                 for from_copy_folder in from_copy_merge_folder_list:
-                    print(f"from_copy_folder:{from_copy_folder}") 
                     merge_folders: list[str] = os.listdir(from_copy_folder)
                     file_data = {}
                     # 遍历 files_to_download 列表并检查是否需要移除元素
@@ -226,7 +224,7 @@ def Process_Copy(isFirst: bool,from_copy_merge_folder_list: list[str] , toDownlo
                     with open(toDownload_file, 'w') as txt_file:
                         for files_list in file_data.values():
                             txt_file.write('\n'.join(files_list) + '\n')
-# TODO: COPY逻辑改善
+
 
 
 
@@ -236,7 +234,7 @@ def Process_Part1(output_file_path, specified_marker_names, start_hour, end_hour
     1.完成  _toDownload.txt中存放需下载文件
     """
     # 指定文件夹
-    directory_path = r"D:\Ropeway\GNSS\FTP_File_Situation"
+    directory_path = r"D:\Ropeway"
     # 要读取得所有FTP文件的情况
     file_list_path = os.path.join(directory_path, "all_files.txt")
     # 读取rnx文件信息 list[RinexFileInfo]
@@ -267,7 +265,7 @@ def Process_Part2(toDownload_path, local_save_path):
     2.完成指定文件的下载工作
     """
     # json文件
-    json_file_path = r'D:\Program Files (x86)\Software\OneDrive\C#\windows_C#\Cableway.Net7\Cableway.Download\options.json'
+    json_file_path = r'D:\Ropeway\options.json'
     # 读取json文件里的FTPConfig
     ftp_config = FTPConfig(json_file_path)
     # 下载的目的地
@@ -296,12 +294,15 @@ def Process_Part3(local_save_path):
     for foldername in os.listdir(local_save_path):
         save_folder_path = os.path.join(local_save_path, foldername)
         # 解压缩文件
+        # 检查文件夹是否为空
+
         RinexCommonManage.unzip_folder_path(folder_path = save_folder_path)
         print("文件解压成功！")
         # 读取文件夹中crx格式的文件 并且没有同名的rnx格式的文件
         to_convert_crx_files: list[RinexFileInfo] = RinexCommonManage.get_rnx_files_crx(save_folder_path)
         # CRX2RNX 文件转换
-        RinexCommonManage.crx_to_rnx(to_convert_crx_files)
+        if to_convert_crx_files is not None:
+            RinexCommonManage.crx_to_rnx(to_convert_crx_files)
         print("文件转换成功！")
 
 @ComD.log_function_call
@@ -321,11 +322,58 @@ def Process_Part4(local_save_path, merge_path):
             n_files: list[RinexFileInfo] = [rnx_file for rnx_file in rinex_list if rnx_file.file_type == RinexFileType.N]
             to_process_rnx_file.append(o_files)
             to_process_rnx_file.append(n_files)
-        # 合并文件
-        RinexCommonManage.merge_files_threadpool(to_process_rnx_file, merge_path, 4)
-        # 遍历合并文件的保存地址 下的所有文件夹里面的 _MO.rnx文件预处理
-        RinexCommonManage.process_rnx_files(merge_path)
-    
+    # 合并文件
+    # RinexCommonManage.merge_files_threadpool(to_process_rnx_file, merge_path, 4)
+    # 遍历合并文件的保存地址 下的所有文件夹里面的 _MO.rnx文件预处理
+    process_rnx_files1(merge_path)
+
+
+def count_files_in_folders(root_folder: str) -> dict:
+    folder_file_count = {}
+    small_file_count = 0  # 记录文件大小小于 1 KB 的个数
+    for root, dirs, files in os.walk(root_folder):
+        folder_name = os.path.relpath(root, root_folder)  # 获取相对于根文件夹的文件夹名称
+        crx_count = sum(1 for file in files if file.endswith('.crx'))  # 统计当前文件夹下的 crx 文件数量
+        rnx_count = sum(1 for file in files if file.endswith('.rnx'))  # 统计当前文件夹下的 rnx 文件数量
+        for file in files:
+            file_path = os.path.join(root, file)
+            file_size_kb = os.path.getsize(file_path) / 1024  # 将文件大小转换为 KB
+            if file_size_kb < 2:  # 如果文件大小小于 1 KB
+                small_file_count += 1
+                os.remove(file_path)
+        folder_file_count[folder_name] = {'crx': crx_count, 'rnx': rnx_count, 'small_files': small_file_count}  # 将文件夹名称及其文件数量添加到字典中
+    return folder_file_count
+
+def delete_small_rnx_files(folder_path):
+    # 遍历文件夹及其子文件夹
+    for root, dirs, files in os.walk(folder_path):
+        for file in files:
+            file_path = os.path.join(root, file)
+            # 检查文件名是否以 ".rnx" 结尾且文件大小小于 2KB
+            if file.endswith('.rnx') and os.path.getsize(file_path) < 2 * 1024:
+                print(f"Deleting file: {file_path}")
+                os.remove(file_path)
+
+def check_folders(folder_path):
+    # 遍历文件夹及其子文件夹
+    for root, dirs, files in os.walk(folder_path):
+        for dir_name in dirs:
+            dir_path = os.path.join(root, dir_name)
+            file_count = 0
+            all_files_valid = True
+            # 检查文件夹中的文件
+            for file_name in os.listdir(dir_path):
+                file_path = os.path.join(dir_path, file_name)
+                # 检查文件大小是否大于 2KB
+                if os.path.isfile(file_path) and os.path.getsize(file_path) > 2 * 1024:
+                    file_count += 1
+                else:
+                    all_files_valid = False
+                    break
+            # 检查文件数量是否满足条件
+            if file_count != 6 and not all_files_valid:
+                print(f"{dir_path} broken.")
+
 
 @ComD.log_function_call
 def Process_Check(toDownload_path, local_save_path):
@@ -335,6 +383,44 @@ def Process_Check(toDownload_path, local_save_path):
     folder_file_count = RinexCommonManage.count_files_in_folders(local_save_path)
     for folder_name, file_count in folder_file_count.items():
         print(f"文件夹 '{folder_name}' 中包含 {file_count} 个文件.")
+
+
+def process_file1(file_path: str, file_name: str) -> None:
+    """
+    处理单个文件的函数
+    """
+    if int(file_name[16:19]) > 216:
+        print(f"{file_name}超日期跳过")
+        return
+    # 读取文件内容
+    with open(file_path, 'r', encoding='utf-8') as file:
+        # 读取文件的所有行数据
+        lines = file.readlines()
+
+    # 获取文件名的前四个字符
+    file_name_prefix = file_name[:4]
+    print(file_name_prefix)
+    # 遍历文件的前四行数据，查找以 "MARKER NAME" 结尾的行并替换该行的前四个字符为文件名的前四个字符
+    for i in range(min(4, len(lines))):
+        if lines[i].strip().endswith("MARKER NAME"):
+            # 如果行内容已经是要替换的内容，则直接结束替换过程
+            if lines[i].startswith(file_name_prefix):
+                print(f"{file_name}已完成")
+                return
+            
+            # 构造新的行内容
+            new_line = file_name_prefix + lines[i][4:]
+            # 将新的行内容替换原来的行
+            lines[i] = new_line
+            print(f"{file_name}第{i+1}行替换为{file_name_prefix}")
+            break
+    else:
+        print("前四行数据中未找到以 'MARKER NAME' 结尾的行。")
+        return
+
+    # 将修改后的内容写回文件
+    with open(file_path, 'w', encoding='utf-8') as file:
+        file.writelines(lines)
 
 def process_rnx_files1(folder_path: str) -> None:
     """
@@ -369,14 +455,102 @@ def process_rnx_files1(folder_path: str) -> None:
     for directory, files in rnx_files.items():
         for file in files:
             file_path = os.path.join(directory, file)
-            print(f"directory={directory}\tfile={file}")
+            process_file1(file_path=file_path,file_name=file)
+
+
 
 @ComD.log_function_call
 def Process_in_one_step():
     base_marker_names = ['B011', 'B021']
-    root_folder = r"D:\Ropeway\MySQL"
+    root_folder = r"D:\Ropeway\Ropeway_47"
+    to_process_marker_names = [  'R051', 'R052', 'R071', 'R072', 'R081', 'R082']
+    # 指定时间范围
+    start_hour= 4
+    end_hour = 7
+    TBC_Process = False
+    isFirstProcess = True
+    delete_small_rnx_files(root_folder)
+    from_copy_merge_folder_list = []
+    for item in to_process_marker_names:
+        folder_name = f"{item}_{start_hour}{end_hour}"
+        folder_path = os.path.join(root_folder, folder_name)
+        os.makedirs(folder_path, exist_ok=True)
+        toDownload_folder = os.path.join(folder_path, 'toDownload')
+        os.makedirs(toDownload_folder, exist_ok=True)
+        FTP_folder = os.path.join(folder_path, 'FTP')
+        os.makedirs(FTP_folder, exist_ok=True)
+        FTPMerge_folder = os.path.join(folder_path, 'FTPMerge')
+        os.makedirs(FTPMerge_folder, exist_ok=True)
+        base_marker_names.append(item)
+        #Process_Part1(toDownload_folder, base_marker_names, start_hour, end_hour)
+
+        from_copy_merge_folder_list.append(FTPMerge_folder)
+        Process_Copy(isFirstProcess, from_copy_merge_folder_list, toDownload_folder ,FTPMerge_folder)
+
+        #Process_Part2(toDownload_folder, FTP_folder)
+        #Process_Part3(FTP_folder)
+        Process_Part4(FTP_folder, FTPMerge_folder)
+        #Process_Check(toDownload_folder, FTP_folder)
+        if TBC_Process:
+            ComputerControl.TBC_auto_Process(FTPMerge_folder, folder_name)
+        base_marker_names.remove(item)
+        isFirstProcess = False
+
+def list_files_in_folders(root_folder):
+    """
+    遍历指定文件夹下的所有文件夹，并将文件信息存储到字典中。
+
+    :param root_folder: 根文件夹路径，例如 D:\Ropeway\FTPMerge
+    :return: 字典，键是文件夹名，值是包含文件名的列表。
+    """
+    folder_dict = {}
+
+    # 遍历根文件夹下的所有文件夹
+    for dirpath, dirnames, filenames in os.walk(root_folder):
+        folder_name = os.path.basename(dirpath)  # 获取当前文件夹名
+
+        # 获取当前文件夹中的所有文件名
+        file_names = []
+        for filename in filenames:
+            file_names.append(filename)
+
+        # 将当前文件夹名及其文件名列表存储到字典中
+        folder_dict[folder_name] = file_names
+
+    return folder_dict
+
+
+def read_txt_files_in_folder(folder_path):
+    """
+    读取指定文件夹下所有的txt文件内容，并存储到字典中。
+
+    :param folder_path: 文件夹路径，例如 D:\Ropeway\GNSS\FTP_toDownload
+    :return: 字典，键是文件名前四个字符，值是文件内容的行列表。
+    """
+    files_dict = {}
+
+    # 遍历文件夹下的所有文件
+    for filename in os.listdir(folder_path):
+        file_path = os.path.join(folder_path, filename)
+        if filename.endswith('.txt'):
+            try:
+                with open(file_path, 'r') as file:
+                    lines = file.readlines()
+                    key = filename[:4]
+                    files_dict[key] = lines
+            except FileNotFoundError:
+                print(f"文件 '{file_path}' 未找到。")
+            except IOError:
+                print(f"无法读取文件 '{file_path}'。")
+
+    return files_dict
+
+def Process_in_one_step2():
+    base_marker_names = ['B011', 'B021']
+    root_folder = r"D:\Ropeway\Ropeway_47"
     # to_process_marker_names = ['R052', 'R071']
-    to_process_marker_names = ['R032', 'R051', 'R052', 'R071', 'R072', 'R081', 'R082']
+    delete_small_rnx_files(root_folder)
+    to_process_marker_names = [ 'R032', 'R051', 'R052', 'R071', 'R072', 'R081', 'R082']
     # 指定时间范围
     start_hour= 4
     end_hour = 7
@@ -393,24 +567,115 @@ def Process_in_one_step():
         os.makedirs(FTP_folder, exist_ok=True)
         FTPMerge_folder = os.path.join(folder_path, 'FTPMerge')
         os.makedirs(FTPMerge_folder, exist_ok=True)
-        TBC_folder = os.path.join(folder_path, 'TBC')
-        os.makedirs(TBC_folder, exist_ok=True)
         base_marker_names.append(item)
-        Process_Part1(toDownload_folder, base_marker_names, start_hour, end_hour)
+        #Process_Part1(toDownload_folder, base_marker_names, start_hour, end_hour)
+        #rom_copy_merge_folder_list.append(FTPMerge_folder)
+        # Process_Copy(isFirstProcess, from_copy_merge_folder_list, toDownload_folder ,FTPMerge_folder)
 
-        from_copy_merge_folder_list.append(FTPMerge_folder)
-        Process_Copy(isFirstProcess, from_copy_merge_folder_list, toDownload_folder ,FTPMerge_folder)
-
-        Process_Part2(toDownload_folder, FTP_folder)
-        # Process_Part3(FTP_folder)
-        # Process_Part4(FTP_folder, FTPMerge_folder)
+        #Process_Part2(toDownload_folder, FTP_folder)
+        #Process_Part3(FTP_folder)
+        # count_files_in_folders(FTPMerge_folder)
+        Process_Part4(FTP_folder, FTPMerge_folder)
         # Process_Check(toDownload_folder, FTP_folder)
         if TBC_Process:
             ComputerControl.TBC_auto_Process(FTPMerge_folder, folder_name)
         base_marker_names.remove(item)
         isFirstProcess = False
 
-#Process_in_one_step()
+def expand_file_names(file_names):
+    expanded_names = []
 
-if __name__=='__main__':
-    print('-----------run-----------')
+    for filename in file_names:
+        parts = filename.split('_')
+        if len(parts) >= 4:
+            time_part = parts[2]  # 获取时间部分，例如 20233531600
+            time_suffix = parts[3]  # 获取时间后缀，例如 4H_MN.rnx
+            if len(time_suffix) >= 5 and time_suffix[2:4].isdigit():
+                base_name = '_'.join(parts[:2])  # 获取基础文件名部分，例如 B02100000_R
+                hour_suffix = time_suffix[:2]  # 获取小时后缀，例如 4H
+                minute_suffix = time_suffix[5:]  # 获取分钟后缀，例如 MN.rnx
+
+                # 解析时间部分
+                year = int(time_part[0:4])
+                month = int(time_part[4:6])
+                day = int(time_part[6:8])
+                hour = int(time_part[8:10])
+                minute = int(time_part[10:12])
+                second = int(time_part[12:14])
+
+                # 生成每小时的文件名
+                for i in range(60):
+                    minute_offset = i * 100
+                    new_time_part = f"{year:04d}{month:02d}{day:02d}{hour:02d}{minute + i:02d}{second:02d}{minute_offset:02d}"
+                    new_filename = f"{base_name}_{new_time_part}_{hour_suffix}_{minute_suffix}"
+                    expanded_names.append(new_filename)
+
+    return expanded_names
+
+
+if __name__ == '__main__':
+    print("----------程序运行----------")
+    # 示例用法：遍历 D:\Ropeway\FTPMerge 文件夹下的所有文件夹，并将文件信息存储到字典中
+    root_folder = r'D:\Ropeway\FTPMerge'
+    result_dict = list_files_in_folders(root_folder)
+
+    need_item_list = ['B011', 'B021', 'R051']
+    required_files = {item: ['MO.rnx', 'MN.rnx'] for item in need_item_list}
+    
+    record_file = []
+    # 打印结果并检查条件
+    for folder_name, file_names in result_dict.items():
+        print(f"文件夹名: {folder_name}")
+        print(f"文件列表: {file_names}")
+
+        # 统计符合条件的文件
+        found_files = {item: {'MO.rnx': False, 'MN.rnx': False} for item in need_item_list}
+        for filename in file_names:
+            for item in need_item_list:
+                if filename.startswith(item):
+                    if filename.endswith('MO.rnx'):
+                        found_files[item]['MO.rnx'] = True
+                    elif filename.endswith('MN.rnx'):
+                        found_files[item]['MN.rnx'] = True
+
+        # 检查每个条件是否完整
+        all_files_found = True
+        for item in need_item_list:
+            if not found_files[item]['MO.rnx'] or not found_files[item]['MN.rnx']:
+                all_files_found = False
+                print(f"文件夹 '{folder_name}' 缺少以下文件:")
+                if not found_files[item]['MO.rnx']:
+                    print(f"{item}_MO.rnx")
+                    record_file.append(f'{item}00000_R_{folder_name[:7]}1600_01H_01S_MO.crx.Z')
+                    record_file.append(f'{item}00000_R_{folder_name[:7]}1700_01H_01S_MO.crx.Z')
+                    record_file.append(f'{item}00000_R_{folder_name[:7]}1800_01H_01S_MO.crx.Z')
+                    record_file.append(f'{item}00000_R_{folder_name[:7]}1900_01H_01S_MO.crx.Z')
+                if not found_files[item]['MN.rnx']:
+                    print(f"{item}_MN.rnx")
+                    record_file.append(f'{item}00000_R_{folder_name[:7]}1600_01H_MN.rnx.Z')
+                    record_file.append(f'{item}00000_R_{folder_name[:7]}1700_01H_MN.rnx.Z')
+                    record_file.append(f'{item}00000_R_{folder_name[:7]}1800_01H_MN.rnx.Z')
+                    record_file.append(f'{item}00000_R_{folder_name[:7]}1900_01H_MN.rnx.Z')
+
+        if all_files_found:
+            print("所有条件文件均已找到.")
+
+    # 将结果写入到txt文件中
+    output_file = r'D:\Ropeway\record_file.txt'
+    with open(output_file, 'w') as f:
+        for item in record_file:
+            f.write(item + '\n')
+
+    print(f"已将记录写入到文件: {output_file}")
+
+
+
+    # folder_path = r'D:\Ropeway\GNSS\FTP_toDownload'
+    # files_dict = read_txt_files_in_folder(folder_path)
+
+    # for key, lines in files_dict.items():
+    #     print(f"文件名前缀: {key}")
+    #     print("文件内容:")
+    #     for line in lines:
+    #         print(line.strip())
+    #     print()

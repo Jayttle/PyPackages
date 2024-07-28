@@ -1012,8 +1012,8 @@ def execute_sql_and_save_to_txt(sql_statement: str, file_path: str):
 def Proj1_high_frequency_data():
     # 执行 SQL 查询并将结果保存到指定的 txt 文件中
     sql_statement = """
-    SELECT * FROM ggkx
-    WHERE time >= '2023-11-24 13:25:13' AND time <= '2023-12-04 14:16:10';
+    SELECT * FROM arr
+    WHERE time >= '2024-07-01 00:00:00' AND time <= '2024-07-02 00:00:00';
     """
     file_path = "SQLquery_results.txt"
     result = execute_sql_and_save_to_txt(sql_statement, file_path)

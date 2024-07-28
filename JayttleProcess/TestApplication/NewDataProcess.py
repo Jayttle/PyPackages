@@ -11,6 +11,7 @@ from math import floor
 import chardet
 import pandas as pd
 from scipy.stats import skew, kurtosis
+from matplotlib.ticker import FormatStrFormatter
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import matplotlib.ticker as ticker
@@ -1154,7 +1155,7 @@ class TiltmeterDataAvage:
         self.roll = roll
         self.num = num
     
-    def read_tiltmeter_data(file_path: str) -> Dict[datetime.date, List['TiltmeterDataAvage']]:
+    def read_tiltmeter_data(file_path: str) -> Dict[datetime.date, 'TiltmeterDataAvage']:
         tiltmeter_data = {}
 
         with open(file_path, 'r') as f:
@@ -1730,8 +1731,8 @@ def plot_ListFloat_Compare_x(ListFloat1: list[float], ListFloat2: list[float], S
     ax.tick_params(axis='y', direction='in', pad=10)
     
     # 绘制线条和散点，设置颜色为黑色
-    plt.plot(datetimes, values1, color='black',linestyle='-', label='白天位移')
-    plt.plot(datetimes, values2, color='black',linestyle='-.',label='晚上位移')
+    plt.plot(datetimes, values1, color='blue',linestyle='-', label='白天位移')
+    plt.plot(datetimes, values2, color='red',linestyle='-.',label='晚上位移')
 
     # 调整底部边界向上移动一点
     plt.subplots_adjust(bottom=0.15)
@@ -1744,16 +1745,133 @@ def plot_ListFloat_Compare_x(ListFloat1: list[float], ListFloat2: list[float], S
         plt.show()
     plt.close()
 
+def plot_ListFloat_pitch(ListFloat1: list[float], SaveFilePath: Optional[str] = None, isShow: bool = True, title: str = None) -> None:
+    """绘制两个ListFloat对象的时间序列图"""
+    """绘制 ListFloat 对象的时间序列图"""
+    values1 = ListFloat1
+
+    datetimes = range(len(ListFloat1))  # 使用数据长度生成简单的序号作为 x 轴
+
+
+    plt.figure(figsize=(6, 4))  # 设置图的大小，单位是英寸
+
+    # 隐藏右边框和上边框
+    ax = plt.gca()
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+    plt.xlabel(f'数据期数/期', fontproperties='SimSun', fontsize=12)  # 设置字体为宋体
+    plt.ylabel('pitch/°', fontproperties='SimSun', fontsize=12)  # 设置字体为宋体
+
+    # 设置最大显示的刻度数
+    plt.tight_layout()  # 自动调整子图间的间距和标签位置
+    # 设置刻度朝向内部，并调整刻度与坐标轴的距离
+    ax.tick_params(axis='x', direction='in', pad=10)  # pad 参数用于控制刻度与坐标轴的距离
+    ax.tick_params(axis='y', direction='in', pad=10)
+    
+
+    # 设置 y 轴坐标格式为两位有效数字
+    ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+    # 绘制线条和散点，设置颜色为黑色
+    plt.plot(datetimes, values1, color='blue',linestyle='-', label='数据')
+
+    # 调整底部边界向上移动一点
+    plt.subplots_adjust(bottom=0.15)
+    plt.subplots_adjust(left=0.15)
+    plt.legend()
+    
+    if SaveFilePath is not None:
+        plt.savefig(SaveFilePath)
+    elif isShow:
+        plt.show()
+    plt.close()
+
+def plot_ListFloat_roll(ListFloat1: list[float], SaveFilePath: Optional[str] = None, isShow: bool = True, title: str = None) -> None:
+    """绘制两个ListFloat对象的时间序列图"""
+    """绘制 ListFloat 对象的时间序列图"""
+    values1 = ListFloat1
+
+    datetimes = range(len(ListFloat1))  # 使用数据长度生成简单的序号作为 x 轴
+
+
+    plt.figure(figsize=(6, 4))  # 设置图的大小，单位是英寸
+
+    # 隐藏右边框和上边框
+    ax = plt.gca()
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+    plt.xlabel(f'数据期数/期', fontproperties='SimSun', fontsize=12)  # 设置字体为宋体
+    plt.ylabel('roll/°', fontproperties='SimSun', fontsize=12)  # 设置字体为宋体
+
+    # 设置最大显示的刻度数
+    plt.tight_layout()  # 自动调整子图间的间距和标签位置
+    # 设置刻度朝向内部，并调整刻度与坐标轴的距离
+    ax.tick_params(axis='x', direction='in', pad=10)  # pad 参数用于控制刻度与坐标轴的距离
+    ax.tick_params(axis='y', direction='in', pad=10)
+    ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+    # 绘制线条和散点，设置颜色为黑色
+    plt.plot(datetimes, values1, color='blue',linestyle='-', label='数据')
+
+    # 调整底部边界向上移动一点
+    plt.subplots_adjust(bottom=0.15)
+    plt.subplots_adjust(left=0.15)
+    plt.legend()
+    
+    if SaveFilePath is not None:
+        plt.savefig(SaveFilePath)
+    elif isShow:
+        plt.show()
+    plt.close()
+
+
+def plot_ListFloat_yaw(ListFloat1: list[float], SaveFilePath: Optional[str] = None, isShow: bool = True) -> None:
+    """绘制两个ListFloat对象的时间序列图"""
+    """绘制 ListFloat 对象的时间序列图"""
+    values1 = ListFloat1
+
+    datetimes = range(len(ListFloat1))  # 使用数据长度生成简单的序号作为 x 轴
+
+
+    plt.figure(figsize=(6, 4))  # 设置图的大小，单位是英寸
+
+    # 隐藏右边框和上边框
+    ax = plt.gca()
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+    plt.xlabel(f'数据期数/期', fontproperties='SimSun', fontsize=12)  # 设置字体为宋体
+    plt.ylabel('yaw/°', fontproperties='SimSun', fontsize=12)  # 设置字体为宋体
+    ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+    # 设置最大显示的刻度数
+    plt.tight_layout()  # 自动调整子图间的间距和标签位置
+    # 设置刻度朝向内部，并调整刻度与坐标轴的距离
+    ax.tick_params(axis='x', direction='in', pad=10)  # pad 参数用于控制刻度与坐标轴的距离
+    ax.tick_params(axis='y', direction='in', pad=10)
+    
+    # 绘制线条和散点，设置颜色为黑色
+    plt.plot(datetimes, values1, color='blue',linestyle='-', label='数据')
+
+    # 调整底部边界向上移动一点
+    plt.subplots_adjust(bottom=0.15)
+    plt.subplots_adjust(left=0.15)
+    plt.legend()
+    
+    if SaveFilePath is not None:
+        plt.savefig(SaveFilePath)
+    elif isShow:
+        plt.show()
+    plt.close()
+
+
 def plot_ListFloat_Compare_pitch_coor(ListFloat1: list[float], ListFloat2: list[float], SaveFilePath: Optional[str] = None, isShow: bool = True, title: str = None) -> None:
     """绘制两个ListFloat对象的时间序列图"""
     """绘制 ListFloat 对象的时间序列图"""
     LFDM.calculate_similarity(ListFloat1, ListFloat2)
-    values1 = ListFloat1
-    values2 = ListFloat2
+    # values1 = ListFloat1
+    # values2 = ListFloat2
+
+    values1 = LFDM.min_max_normalization(ListFloat1)
+    values2 = LFDM.min_max_normalization(ListFloat2)
 
     datetimes = range(len(ListFloat1))  # 使用数据长度生成简单的序号作为 x 轴
-    values1 = LFDM.min_max_normalization(values1)
-    values2 = LFDM.min_max_normalization(values2)
 
 
     plt.figure(figsize=(6, 4))  # 设置图的大小，单位是英寸
@@ -1763,7 +1881,7 @@ def plot_ListFloat_Compare_pitch_coor(ListFloat1: list[float], ListFloat2: list[
     ax.spines['right'].set_visible(False)
     ax.spines['top'].set_visible(False)
     plt.xlabel(f'{title}数据期数/期', fontproperties='SimSun', fontsize=12)  # 设置字体为宋体
-    plt.ylabel('俯仰角/°', fontproperties='SimSun', fontsize=12)  # 设置字体为宋体
+    plt.ylabel('pitch/°', fontproperties='SimSun', fontsize=12)  # 设置字体为宋体
 
     # 设置最大显示的刻度数
     plt.tight_layout()  # 自动调整子图间的间距和标签位置
@@ -1772,8 +1890,8 @@ def plot_ListFloat_Compare_pitch_coor(ListFloat1: list[float], ListFloat2: list[
     ax.tick_params(axis='y', direction='in', pad=10)
     
     # 绘制线条和散点，设置颜色为黑色
-    plt.plot(datetimes, values1, color='black',linestyle='-', label='白天数据')
-    plt.plot(datetimes, values2, color='black',linestyle='-.',label='晚上数据')
+    plt.plot(datetimes, values1, color='blue',linestyle='-', label='数据1')
+    plt.plot(datetimes, values2, color='red',linestyle='-.',label='数据2')
 
     # 调整底部边界向上移动一点
     plt.subplots_adjust(bottom=0.15)
@@ -1840,7 +1958,7 @@ def plot_ListFloat_Compare_y(ListFloat1: list[float], ListFloat2: list[float], S
     ax = plt.gca()
     ax.spines['right'].set_visible(False)
     ax.spines['top'].set_visible(False)
-    plt.xlabel(f'{title}数据期数/期', fontproperties='SimSun', fontsize=12)  # 设置字体为宋体
+    plt.xlabel(f'数据期数/期', fontproperties='SimSun', fontsize=12)  # 设置字体为宋体
     plt.ylabel('索道坐标y轴方向位移监测/m', fontproperties='SimSun', fontsize=12)  # 设置字体为宋体
 
     # 设置最大显示的刻度数
@@ -1850,8 +1968,8 @@ def plot_ListFloat_Compare_y(ListFloat1: list[float], ListFloat2: list[float], S
     ax.tick_params(axis='y', direction='in', pad=10)
     
     # 绘制线条和散点，设置颜色为黑色
-    plt.plot(datetimes, values1, color='black',linestyle='-', label='白天位移')
-    plt.plot(datetimes, values2, color='black',linestyle='-.',label='晚上位移')
+    plt.plot(datetimes, values1, color='blue',linestyle='-', label='白天位移')
+    plt.plot(datetimes, values2, color='red',linestyle='-.',label='晚上位移')
 
     # 调整底部边界向上移动一点
     plt.subplots_adjust(bottom=0.15)
@@ -2032,10 +2150,10 @@ def main_TODO2():
     # LFDM.plot_ListFloat(x_DataPoints['R051_1215'], isShow=True, title='R051_1215_x')
     # LFDM.plot_ListFloat(y_DataPoints['R051_1215'], isShow=True, title='R051_1215_y')
 
-    item_R1_list = ['R071_0407']
-    item_R2_list = ['R072_0407']
-    # item_R1_list = ['R031_1215', 'R051_1215', 'R071_1215', 'R081_1215']
-    # item_R2_list = ['R032_1215', 'R052_1215', 'R072_1215', 'R082_1215']
+    # item_R1_list = ['R071_1215']
+    # item_R2_list = ['R072_1215']
+    item_R1_list = ['R031_0407', 'R031_1215', 'R051_0407','R051_1215','R071_0407', 'R071_1215','R081_0407', 'R081_1215']
+    item_R2_list = ['R032_0407','R032_1215', 'R052_0407','R052_1215','R072_0407', 'R072_1215','R082_0407', 'R082_1215']
     for idx in range(len(item_R1_list)):
         matched_list1, matched_list2 = match_DataPoints_in_ropeway(Receiver_DataPoints, item_R1_list[idx], item_R2_list[idx])
         x_coordinates_R031, y_coordinates_R031 = transform_ListDataPoint_to_xy(matched_list1)
@@ -2045,6 +2163,7 @@ def main_TODO2():
         filtered_y_coords_R1 = []
         filtered_x_coords_R2 = []
         filtered_y_coords_R2 = []
+        dt_list = []
         n = len(y_coordinates_R031)
         used = [False] * n
         for i in range(n):
@@ -2056,35 +2175,36 @@ def main_TODO2():
                 filtered_y_coords_R1.append(y_coordinates_R031[i])
                 filtered_x_coords_R2.append(x_coordinates_R032[i])
                 filtered_y_coords_R2.append(y_coordinates_R032[i])
-
+                dt_list.append(matched_list1[i].start_time)
         print(len(filtered_x_coords_R1))
+        print(f'------------{item_R1_list[idx]}------------')
+        removed_points  = LFDM.detect_knn_anomaly_xy_with_while(filtered_x_coords_R1, filtered_y_coords_R1)
+        print(f"{item_R1_list[idx]}:{removed_points}")
+        # to_marker_point = detected_outliers.tolist()
 
-        scores, detected_outliers, normal_mean  = LFDM.detect_knn_anomaly_xy(filtered_x_coords_R1, filtered_y_coords_R1)
-        print(f"{item_R1_list[idx]}:{detected_outliers}")
-        to_marker_point = detected_outliers.tolist()
-
-        plot_ListFloat_x(filtered_x_coords_R1)
-        plot_ListFloat_y(filtered_y_coords_R1)
-        plot_ListFloat_with_marker(filtered_x_coords_R1, to_marker_point)
+        # plot_ListFloat_x(filtered_x_coords_R1)
+        # plot_ListFloat_y(filtered_y_coords_R1)
+        # plot_ListFloat_with_marker(filtered_x_coords_R1, to_marker_point)
         # plot_ListFloat_with_marker(filtered_y_coords_R1, to_marker_point)
 
-        plot_ListFloat_Compare_without_marker(filtered_x_coords_R1, filtered_x_coords_R2, to_marker_idx=to_marker_point)
+        # plot_ListFloat_Compare_without_marker(filtered_x_coords_R1, filtered_x_coords_R2, to_marker_idx=to_marker_point)
         # # 调用 calculate_similarity 并接受返回的元组
-        for marker in to_marker_point:
-            print(matched_list1[marker].start_time)
+        # for marker in to_marker_point:
+        #     print(dt_list[marker])
 
-        plot_points_with_markeridx(filtered_x_coords_R1, filtered_y_coords_R1, '7号支架主天线', to_marker_point)
+        # plot_points_with_markeridx(filtered_x_coords_R1, filtered_y_coords_R1, '7号支架主天线', to_marker_point)
+
+        print(f'------------{item_R2_list[idx]}------------')
 
 
-        scores, detected_outliers, normal_mean  = LFDM.detect_knn_anomaly_xy(filtered_x_coords_R2, filtered_y_coords_R2)
-        print(f"{item_R2_list[idx]}:{detected_outliers}")
-        to_marker_point = detected_outliers.tolist()
-        # # 调用 calculate_similarity 并接受返回的元组
-        for marker in to_marker_point:
-            print(matched_list2[marker].start_time)
+        removed_points  = LFDM.detect_knn_anomaly_xy_with_while(filtered_x_coords_R2, filtered_y_coords_R2)
+        # print(f"{item_R2_list[idx]}:{removed_points}")
+        # # # 调用 calculate_similarity 并接受返回的元组
+        # for marker in removed_points:
+        #     print(dt_list[marker])
 
         
-        plot_points_with_markeridx(filtered_x_coords_R2, filtered_y_coords_R2, '7号支架副天线', to_marker_point)
+        # plot_points_with_markeridx(filtered_x_coords_R2, filtered_y_coords_R2, '7号支架副天线', to_marker_point)
         # LFDM.calculate_similarity(x_DataPoints['R031_1215'], y_DataPoints['R031_1215'])
     
     # LFDM.plot_ListFloat_with_markeridx(ListFloat=x_DataPoints['R031_1215'], isShow=True,to_marker_idx=to_marker_point)
@@ -2169,8 +2289,6 @@ def process_data_points(Receiver_DataPoints, item_R1_list, item_R2_list, filter_
             filtered_y_coords_R2.append(y_coordinates_R032[i])
             dt_list.append(matched_list1[i].start_time.date())
     
-    
-
     return filtered_x_coords_R1, filtered_y_coords_R1, filtered_x_coords_R2, filtered_y_coords_R2, dt_list
 
 def process_outliers(filtered_x_coords_R1, filtered_y_coords_R1, filtered_x_coords_R2, filtered_y_coords_R2, dt_list, filter_outliers_dict, marker_name):
@@ -2204,14 +2322,14 @@ def analyze_variability(data:list[float]):
     data_skewness = skew(data)
     data_kurtosis = kurtosis(data)
 
-    print(f"平均值: {mean_value:.2f}")
-    print(f"方差: {variance:.2f}")
-    print(f"标准差: {std_dev:.2f}")
-    print(f"范围: {data_range:.2f}")
-    print(f"四分位距: {iqr:.2f}")
-    print(f"变异系数: {cv:.2f}")
-    print(f"偏度: {data_skewness:.2f}")
-    print(f"峰度: {data_kurtosis:.21f}")
+    print(f"平均值: {mean_value:.4f}")
+    print(f"方差: {variance:.4f}")
+    print(f"标准差: {std_dev:.4f}")
+    print(f"范围: {data_range:.4f}")
+    print(f"四分位距: {iqr:.4f}")
+    print(f"变异系数: {cv:.4f}")
+    print(f"偏度: {data_skewness:.4f}")
+    print(f"峰度: {data_kurtosis:.4f}")
 
     results = {
         "平均值": mean_value,
@@ -2317,11 +2435,13 @@ def main_load_GNSS_data():
         all_data[item_R1_list[idx]].append(x_coords_R1)
         all_data[item_R1_list[idx]].append(y_coords_R1)
         all_data[item_R1_list[idx]].append(tlist)
+        all_data[item_R1_list[idx]].append([data.elevation for data in Receiver_DataPoints[item_R1_list[idx]]])
         if item_R2_list[idx] not in all_data:
             all_data[item_R2_list[idx]] = []
         all_data[item_R2_list[idx]].append(x_coords_R2)
         all_data[item_R2_list[idx]].append(y_coords_R2)
         all_data[item_R2_list[idx]].append(tlist)
+        all_data[item_R2_list[idx]].append([data.elevation for data in Receiver_DataPoints[item_R2_list[idx]]])
         # plot_ListFloat_x(filtered_x_coords_R1)
         # plot_ListFloat_with_marker(filtered_x_coords_R1, to_marker_point)
 
@@ -2645,9 +2765,200 @@ def main_process_GNSS_data_compare_with_met():
     weather_data: Dict[str, Tuple[float, float]] = read_weather_data(file_path)
     temperature_data, temperature_get_maxmin_time = read_tianmeng_met()
 
+def main_tiltmeter_compare():
+    print("---------------------main_process_GNSS_data_compare_with_tiltmeter-------------------")
+    tiltmeter_data_0407 = TiltmeterDataAvage.read_tiltmeter_data(r"D:\Program Files (x86)\Software\OneDrive\PyPackages_DataSave\new_data\tiltmeter_0407.txt")
+    tiltmeter_data_1215 = TiltmeterDataAvage.read_tiltmeter_data(r"D:\Program Files (x86)\Software\OneDrive\PyPackages_DataSave\new_data\tiltmeter_1215.txt")
+    common_dates = TiltmeterDataAvage.find_common_dates(tiltmeter_data_0407,tiltmeter_data_1215)
+    # 打印共同日期的数据
+    # 初始化列表
+    pitch_0407 = []
+    roll_0407 = []
+    pitch_1215 = []
+    roll_1215 = []
+    dt_list = []
+    # # 提取共同日期的数据并将值存入列表
+    for date_obj, (data1, data2) in common_dates.items():
+        pitch_0407.append(data1.pitch)
+        roll_0407.append(data1.roll)
+        pitch_1215.append(data2.pitch)
+        roll_1215.append(data2.roll)
+        dt_list.append(date_obj)
 
+    print(f'roll_0407')
+    results1 = analyze_variability(pitch_0407)
+    print()
+    print(f'roll_1215:')
+    results2 = analyze_variability(pitch_1215)
+    print()
+    # 比较两个结果的差异
+    for key in results1:
+        difference = results1[key] - results2[key]
+        print(f"{key}: 差异 = {difference:.4f}")
+
+    # plot_ListFloat_Compare_pitch_coor(ListFloat1=roll_0407,ListFloat2=roll_1215,title='')
+
+def calculate_attitude_angles(point1, point2):
+    # 计算两点间的差向量
+    vector = point2 * 1000- point1 * 1000
+    print(vector)
+    # 计算向量的模长
+    magnitude = np.linalg.norm(vector)
+    
+
+    # 避免除以零的错误
+    if magnitude == 0:
+        return None
+
+    # 计算各个角度
+    # 俯仰角 Pitch: arctan(dy/dz) 如果dz为零，则处理特殊情况
+    pitch = np.arctan2(vector[1], vector[2]) if vector[2] != 0 else np.pi/2 if vector[1] > 0 else -np.pi/2
+
+    # 偏航角 Yaw: arctan(dx/dz) 如果dz为零，则处理特殊情况
+    yaw = np.arctan2(vector[0], vector[2]) if vector[2] != 0 else np.pi/2 if vector[0] > 0 else -np.pi/2
+
+    # 翻滚角 Roll: arctan(dy/dx) 如果dx为零，则处理特殊情况
+    roll = np.arctan2(vector[1], vector[0]) if vector[0] != 0 else np.pi/2 if vector[1] > 0 else -np.pi/2
+
+    # 转换为度
+    pitch_deg = np.degrees(pitch)
+    yaw_deg = np.degrees(yaw)
+    roll_deg = np.degrees(roll)
+
+
+    # 计算与90度的差值
+    # pitch_deg = np.abs(90 - pitch_deg)
+    # roll_deg = np.abs(90 - roll_deg)
+
+    return {'Pitch': pitch_deg, 'Yaw': yaw_deg, 'Roll': roll_deg}
+
+def main_process_GNSS_data_pitchrow():
+    all_data = main_load_GNSS_data()
+
+    
+    print("---------------------main_process_GNSS_data_compare-------------------")
+
+    
+    to_process_itemR1 = ['R071_1215']
+    to_process_itemR2 = ['R072_1215']
+
+
+    aligned_list1_x = []
+    aligned_list2_x = []
+
+    aligned_list1_y = []
+    aligned_list2_y = []
+
+    aligned_list1_z = []
+    aligned_list2_z = []
+
+    aligned_dt = []
+    for idx in range(len(to_process_itemR1)):
+
+        idx1 = 0
+        idx2 = 0
+
+        dt_list1 = all_data[to_process_itemR1[idx]][2]
+        dt_list2 = all_data[to_process_itemR2[idx]][2]
+
+        ListFloat1_x = all_data[to_process_itemR1[idx]][0]
+        ListFloat2_x = all_data[to_process_itemR2[idx]][0]
+
+        ListFloat1_y = all_data[to_process_itemR1[idx]][1]
+        ListFloat2_y = all_data[to_process_itemR2[idx]][1]
+
+        ListFloat1_z = all_data[to_process_itemR1[idx]][3]
+        ListFloat2_z = all_data[to_process_itemR2[idx]][3]
+
+        while idx1 < len(dt_list1) and idx2 < len(dt_list2):
+            if dt_list1[idx1] == dt_list2[idx2]:
+                aligned_list1_x.append(ListFloat1_x[idx1])
+                aligned_list2_x.append(ListFloat2_x[idx2])
+
+                aligned_list1_y.append(ListFloat1_y[idx1])
+                aligned_list2_y.append(ListFloat2_y[idx2])
+
+                aligned_list1_z.append(ListFloat1_z[idx1])
+                aligned_list2_z.append(ListFloat2_z[idx2])
+
+                aligned_dt.append(dt_list1[idx1])
+
+                idx1 += 1
+                idx2 += 1
+            elif dt_list1[idx1] < dt_list2[idx2]:
+                idx1 += 1
+            else:
+                idx2 += 1
+
+    attitude_angles_list = []
+    for i in range(len(aligned_list1_x)):
+        point1 = np.array([aligned_list1_x[i], aligned_list1_y[i], aligned_list1_z[i]])
+        point2 = np.array([aligned_list2_x[i], aligned_list2_y[i], aligned_list2_z[i]])
+        attitude_angles = calculate_attitude_angles(point1, point2)
+        if attitude_angles:
+            attitude_angles_list.append(attitude_angles)
+
+
+    pitch_list = []
+    roll_list = []
+    yaw_list = []
+    for i in range(len(attitude_angles_list)):
+        pitch_list.append(attitude_angles_list[i]['Pitch'])
+        roll_list.append(attitude_angles_list[i]['Roll'])
+        yaw_list.append(attitude_angles_list[i]['Yaw'])
+    # plot_ListFloat_pitch(pitch_list)
+    # plot_ListFloat_yaw(yaw_list)
+    # plot_ListFloat_roll(roll_list)
+
+
+
+    tiltmeter_data_1215: Dict[datetime.date, 'TiltmeterDataAvage'] = TiltmeterDataAvage.read_tiltmeter_data(r"D:\Program Files (x86)\Software\OneDrive\PyPackages_DataSave\new_data\tiltmeter_1215.txt")
+    pitch_1215 = []
+    roll_1215 = []
+    dt_list = []
+    for date in tiltmeter_data_1215:
+        dt_list.append(date)
+        pitch_1215.append(tiltmeter_data_1215[date].pitch)
+        roll_1215.append(tiltmeter_data_1215[date].roll)
+    # 打印共同日期的数据
+    # 初始化列表
+
+    common_pitch = []
+    common_roll = []
+
+    com_pitch = []
+    com_yaw= []
+    com_roll = []
+    # # 提取共同日期的数据并将值存入列表
+
+    idx1 = 0
+    idx2 = 0
+
+
+    while idx1 < len(aligned_dt) and idx2 < len(dt_list):
+        print(f'idx1: {aligned_dt[idx1]} ,idx2: {dt_list[idx2]}')
+        if aligned_dt[idx1] == dt_list[idx2]:
+            common_pitch.append(pitch_1215[idx2])
+            common_roll.append(roll_1215[idx2])
+
+            com_pitch.append(pitch_list[idx1])
+            com_yaw.append(yaw_list[idx1])
+            com_roll.append(roll_list[idx1])
+            idx1 += 1
+            idx2 += 1
+        elif aligned_dt[idx1] < dt_list[idx2]:
+            idx1 += 1
+        else:
+            idx2 += 1
+
+    plot_ListFloat_Compare_pitch_coor(common_pitch,com_roll,title=' ')
+    #     ile.write(f"{aligned_dt[i]}\t{attitude_angles_list[i]['Pitch']}\t{attitude_angles_list[i]['Yaw']}\t{attitude_angles_list[i]['Roll']}\n")
+
+    # with open('date.txt', 'w') as file:
+    #     for i in range(len(attitude_angles_list)):
+    #         file.write(f"{aligned_dt[i]}\t{attitude_angles_list[i]['Pitch']}\t{attitude_angles_list[i]['Yaw']}\t{attitude_angles_list[i]['Roll']}\n")
 
 
 if __name__ == "__main__":
     print("---------------------run-------------------")
-    main_process_GNSS_data_compare_with_met()
+    main_process_GNSS_data_pitchrow()
