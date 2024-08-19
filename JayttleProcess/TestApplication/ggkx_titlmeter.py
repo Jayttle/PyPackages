@@ -1060,11 +1060,37 @@ def run_main1():
 
 
 def run_main2():
-    data_file: str = rf"C:\Users\Jayttle\Desktop\20230704\ggkx_R031_2023-7-4.txt"
-    ggkx_data: List[GgkxData] = GgkxData.read_ggkx_data(data_file)
-    ggkx_coordinate_list = GgkxData.convert_to_coordinates(ggkx_data)
-    output_folder = rf"C:\Users\Jayttle\Desktop\output_data"
-    GgkxDataWithCoordinates.filter_data_to_files_with_coordinates(ggkx_coordinate_list, output_folder, '20230811')
+    data_file: str = rf"C:\Users\Jayttle\Desktop\20230811\ggkx_R071_ggkx_R071_2023-08-11.txt"
+    # ggkx_data: List[GgkxDataWithCoordinates] = GgkxDataWithCoordinates.read_ggkx_data_with_coordinates(data_file)
+    
+    # for item in ggkx_data:
+    #     x_prime, y_prime = ropeway_transform_coordinates(item.east_coordinate, item.north_coordinate)
+    #     item.east_coordinate = x_prime
+    #     item.north_coordinate = y_prime
+    # output_folder = rf"C:\Users\Jayttle\Desktop\20230811"
+    # GgkxDataWithCoordinates.filter_data_to_files_with_coordinates(ggkx_data, output_folder, 'convert20230811')
+
+    locations = {
+        "B011": (35.474852, 118.072091),
+        "B021": (35.465000, 118.035312),
+        "R031": (35.473642676796, 118.054358431073),
+        "R032": (35.473666223407, 118.054360237421),
+        "R051": (35.473944469154, 118.048584306326),
+        "R052": (35.473974942138, 118.048586858521),
+        "R071": (35.474177696631, 118.044201562812),
+        "R072": (35.474204534806, 118.044203691212),
+        "R081": (35.474245973695, 118.042930824340),
+        "R082": (35.474269576552, 118.042932741649)
+    }
+    # 定义一个字典来存储每个位置对应的东北坐标
+    east_north_coordinates = {}
+    # 批量转换经纬度坐标为东北坐标
+    for location, (lat, lon) in locations.items():
+        easting, northing = TBCProcessCsv.convert_coordinates(lat, lon)
+        east_north_coordinates[location] = (easting, northing)
+
+    x_prime, y_prime = ropeway_transform_coordinates(east_north_coordinates['R071'][0], east_north_coordinates['R071'][1])
+    print(f"x_prime, y_prime:{x_prime} {y_prime}")
     # GgkxData.filter_data_to_files_in_specified_date(ggkx_data, r'C:\Users\Jayttle\Desktop\20230704', '2023-7-4')
 
 def run_main3():
@@ -1175,9 +1201,44 @@ def run_main7():
     with open(file_path, 'w') as file:
         for key, data in avg_dict.items():
             file.write(f"{key}\t{data.pitch}\t{data.roll}\t{data.num}\n")
+
+def ropeway_transform_coordinates(x,y):
+    R031_east, R031_north= 595694.317320648, 3927652.154545162
+    R032_east, R032_north= 595694.4533681379, 3927654.7689213157
+
+    R081_east, R081_north= 594656.3945218798, 3927708.0756872687
+    R082_east, R082_north= 594656.540875324, 3927710.696388756
+    x_prime, y_prime = transform_coordinates(R081_east, R081_north,  R031_east, R031_north, x, y)
+    return x_prime, y_prime
+
+def transform_coordinates(x1, y1, x2, y2, x, y):
+    # Calculate vector AB
+    ABx = x2 - x1
+    ABy = y2 - y1
+    
+    # Calculate the magnitude of AB
+    magnitude_AB = math.sqrt(ABx**2 + ABy**2)
+    
+    # Unit vector along AB
+    if magnitude_AB != 0:
+        AB_unit_x = ABx / magnitude_AB
+        AB_unit_y = ABy / magnitude_AB
+    else:
+        raise ValueError("Points (x1, y1) and (x2, y2) are the same, cannot determine a valid axis.")
+    
+    # Calculate vector AC
+    ACx = x - x1
+    ACy = y - y1
+    
+    # Coordinate transformation
+    x_prime = ACx * AB_unit_x + ACy * AB_unit_y
+    y_prime = -ACx * AB_unit_y + ACy * AB_unit_x
+    
+    return x_prime, y_prime
+
 if __name__ == "__main__":
     print("---------------------run-------------------")
-    run_main7()
+    run_main2()
 
 #TODO: 1.用平均值的横滚角和俯仰角来表示索道支架姿态
 #TODO：2.绘制曲线和相关系数表示环境数据和
