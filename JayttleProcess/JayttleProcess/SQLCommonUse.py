@@ -93,18 +93,11 @@ def risky_function(x):
 
 
 SQL_CONFIG = {
-    "host": "47.98.201.213",
-    "user": "root",
-    "password": "TJ1qazXSW@",
-    "database": "tianmeng_cableway"
+    "host": "localhost",
+    "user": "Jayttle",
+    "password": "@JayttleRoot",
+    "database": "jayttle"
 }
-# SQL_CONFIG = {
-#     "host": "localhost",
-#     "user": "Jayttle",
-#     "password": "@JayttleRoot",
-#     "database": "jayttle"
-# }
-
 
 def execute_sql(sql_statement: str) -> Union[str, list[tuple]]:
     # 建立数据库连接
