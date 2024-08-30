@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='JayttleProcess',
-    version='0.4.0',
+    version='0.4.1',
     description='modifty time:2024-08-30 \n en: Data Process;\n zh_CN:数据处理的方法',
     setup_requires=['wheel'],
     packages=find_packages(),

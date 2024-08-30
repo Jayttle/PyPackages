@@ -7,7 +7,6 @@ import chardet
 
 pytesseract.pytesseract.tesseract_cmd = r'D:\Program Files\Tesseract-OCR\tesseract.exe'
 
-
 def move_and_click( x, y):
     """移动鼠标到指定坐标并单击"""
     pyautogui.moveTo(x, y)

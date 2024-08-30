@@ -7,26 +7,19 @@ from email.mime.multipart import MIMEMultipart
 from email.utils import parsedate_to_datetime
 from datetime import datetime, timedelta
 import poplib
+from typing import Union, Optional
+from pathlib import Path
 from email import policy
 from email.parser import BytesParser
 from email.header import decode_header, make_header
 
 class EmailUseType:
-    def __init__(self, username: str = '', passwd: str = '', receiver: str = '') -> None:
-        self.sender = username
-        self.user = username
-        self.passwd = passwd
-        self.receiver = receiver
-
-        config_file_path = r'D:\Program Files (x86)\Software\OneDrive\PyPackages\config.json' 
-        if config_file_path is not None:
-            self.load_emailInfo(config_file_path) 
-
-    def check_emailInfo(self):
-        print(self.sender)
-        print(self.user)
-        print(self.passwd)
-        print(self.receiver)
+    def __init__(self, config_file_path: str) -> None:
+        self.sender: Optional[str] = None
+        self.user: Optional[str] = None
+        self.passwd: Optional[str] = None
+        self.receiver: Optional[str] = None
+        self.load_emailInfo(config_file_path) 
 
     def load_emailInfo(self, file_path: str):
         try:
@@ -41,12 +34,22 @@ class EmailUseType:
             self.passwd = qq_email_config.get('passwd', self.passwd)
             self.receiver = qq_email_config.get('receiver', self.receiver)
             
+            if not all([self.sender, self.user, self.passwd, self.receiver]):
+                print("警告:email 配置中的某些信息缺失。")
         except FileNotFoundError:
             print(f"文件 {file_path} 未找到。")
         except json.JSONDecodeError:
             print("文件内容不是有效的 JSON 格式。")
         except Exception as e:
             print(f"发生错误：{e}")
+
+    def check_emailInfo(self) -> None:
+        print('----- Email Info -----')
+        print(f"Sender: {self.sender}")
+        print(f"User: {self.user}")
+        print(f"Password: {self.passwd}")
+        print(f"Receiver: {self.receiver}")
+
 
     def send_QQ_email_plain(self, email_title: str = 'Null', email_content: str = ''):
         "发送纯文本的qq邮件"
@@ -235,5 +238,6 @@ class EmailUseType:
         pop_server.quit()
 
 if __name__ =='__main__':
-    email_use = EmailUseType()
+    config_path = r'D:\Program Files (x86)\Software\OneDrive\PyPackages\config.json'
+    email_use = EmailUseType(config_path)
     email_use.check_emailInfo()
