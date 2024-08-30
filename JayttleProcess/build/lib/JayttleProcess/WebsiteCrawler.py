@@ -168,7 +168,7 @@ def run_find_missing_dates():
                 print(date.strftime("%Y-%m-%d"))
             print()  # 为了可读性增加一个空行 
 
-# if __name__ == '__main__':
+if __name__ == '__main__':
     # 打印并按照日期排序写入到文件
-    # run_find_missing_dates()
-    # drive_chrome()
+    run_find_missing_dates()
+    drive_chrome()

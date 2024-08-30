@@ -2,6 +2,7 @@ README.txt
 setup.py
 JayttleProcess/CommonDecorator.py
 JayttleProcess/ComputerControl.py
+JayttleProcess/EmailsmtplibUse.py
 JayttleProcess/EntertainmentCode.py
 JayttleProcess/FTPCommonUse.py
 JayttleProcess/JsonCommonManage.py
