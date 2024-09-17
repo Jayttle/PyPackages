@@ -1220,28 +1220,6 @@ def check_knn_return_time(list_datapoint: list[DataPoint]) -> list[datetime]:
         outliers_times.append(time_list[idx])
     return outliers_times
 
-
-def main_TODO9():
-    grouped_DataPoints: dict[str, list[DataPoint]] = load_DataPoints()
-    outliers_time_dict: dict[str, list[str]] = {}
-    for key, list_datapoint in grouped_DataPoints.items():
-        print(f"{key}:{len(list_datapoint)}")
-        # outliers_times = check_distance_return_time(list_datapoint)
-        outliers_times = check_knn_return_time(list_datapoint)
-        for time_obj in outliers_times:
-            # 转换为字符串并进行切片操作
-            time_str = str(time_obj)
-            date_str = time_str[:10]
-            if date_str not in outliers_time_dict:
-                outliers_time_dict[date_str] = []
-            outliers_time_dict[date_str].append(f"{key}")
-
-    # 按照日期对 outliers_time_dict 进行排序
-    sorted_outliers_time_dict = dict(sorted(outliers_time_dict.items()))
-
-    for key, list_time in sorted_outliers_time_dict.items():
-        print(f"{key}:{list_time}")
-
 def find_consecutive_data(data_dict: dict[str, list[DataPoint]], target_key: str, target_date: str) -> int:
     # 找到目标日期的数据点
     target_data: list[DataPoint] = data_dict[target_key]
@@ -1304,48 +1282,67 @@ def main_TODO11():
 
         plot_list_DataPoint(filter_list_datapoint, receiver)
 
+def data_point_to_dict(dp: DataPoint) -> dict:
+    return {
+        'Point ID': dp.point_id,
+        'North Coordinate': dp.north_coordinate,
+        'East Coordinate': dp.east_coordinate,
+        'Elevation': dp.elevation,
+        'Latitude': dp.latitude,
+        'Longitude': dp.longitude,
+        'Ellipsoid Height': dp.ellipsoid_height,
+        'Start Time': dp.start_time,
+        'End Time': dp.end_time,
+        'Duration': dp.duration,
+        'PDOP': dp.pdop,
+        'RMS': dp.rms,
+        'Horizontal Accuracy': dp.horizontal_accuracy,
+        'Vertical Accuracy': dp.vertical_accuracy,
+        'North Coordinate Error': dp.north_coordinate_error,
+        'East Coordinate Error': dp.east_coordinate_error,
+        'Elevation Error': dp.elevation_error,
+        'Height Error': dp.height_error
+    }
 
-def check_outliers_in_list_datapoint(list_datapoint: List[DataPoint]):
-    # 使用列表推导式过滤出符合条件的 DataPoint 对象
-    filtered_list = [datapoint for datapoint in list_datapoint if datapoint.east_coordinate <= 100]
-    return filtered_list
+def convert_grouped_data_points_to_df(grouped_DataPoints: dict[str, list[DataPoint]]) -> pd.DataFrame:
+    all_data = []
+    for group_key, data_points in grouped_DataPoints.items():
+        for dp in data_points:
+            data_dict = data_point_to_dict(dp)
+            data_dict['Group'] = group_key
+            all_data.append(data_dict)
+    
+    return pd.DataFrame(all_data)
 
-def main_TODO12():
+def save_df_to_txt(df: pd.DataFrame, filename: str):
+    with open(filename, 'w') as file:
+        file.write(df.to_string(index=False))
+
+def main_TODO9():
     grouped_DataPoints: dict[str, list[DataPoint]] = load_DataPoints()
-    marker_name = "R071_1619"
-    distances_and_bearings = calculate_distance_and_bearing(grouped_DataPoints[marker_name])
-    datetime_list = [data.start_time for data in grouped_DataPoints[marker_name]]
+    outliers_time_dict: dict[str, list[str]] = {}
+    
+    for key, list_datapoint in grouped_DataPoints.items():
+        print(f"{key}:{len(list_datapoint)}")
+        # outliers_times = check_distance_return_time(list_datapoint)
+        outliers_times = check_knn_return_time(list_datapoint)
+        for time_obj in outliers_times:
+            # 转换为字符串并进行切片操作
+            time_str = str(time_obj)
+            date_str = time_str[:10]
+            if date_str not in outliers_time_dict:
+                outliers_time_dict[date_str] = []
+            outliers_time_dict[date_str].append(f"{key}")
 
-    list_distance = []
-    indices_to_remove = []  # 用于存储需要删除的索引
-    for idx, (distance, bearing) in enumerate(distances_and_bearings):
-        if distance >= 100:
-            indices_to_remove.append(idx)
-        else:
-            list_distance.append(distance)
+    # 按照日期对 outliers_time_dict 进行排序
+    sorted_outliers_time_dict = dict(sorted(outliers_time_dict.items()))
 
-    print(f"错误数据有：{len(indices_to_remove)}")
-    datetime_list = (data.start_time for idx, data in enumerate(grouped_DataPoints[marker_name]) if idx not in indices_to_remove)
+    for key, list_time in sorted_outliers_time_dict.items():
+        print(f"{key}:{list_time}")
 
-
-    dates = ["2023-04-10", "2023-05-16", "2023-06-06", "2023-07-07", "2023-07-09", "2023-08-11", "2023-10-31"]
-
-    # 将字符串日期转换为 datetime 对象
-    datetime_dates = [datetime.strptime(date, "%Y-%m-%d") for date in dates]
-
-    plot_data_in_season_version2(list_distance, datetime_list, marker_time=datetime_dates, title=marker_name)
-
-
-def main_TODO13():
-    grouped_DataPoints: dict[str, list[DataPoint]] = load_DataPoints()
-    marker_name = 'R031_0407'
-    east_coordinate_list = [data.east_coordinate for data in grouped_DataPoints[marker_name]]
-    north_coordinate_list = [data.north_coordinate for data in grouped_DataPoints[marker_name]]
-    ListFloatDataMethod.calculate_and_print_static(east_coordinate_list)
-    ListFloatDataMethod.calculate_and_print_static(north_coordinate_list)
-
-    # plot_list_DataPoint_without_time(grouped_DataPoints[marker_name], marker_name)
-
+    # 将 grouped_DataPoints 转换为 DataFrame 并保存到文本文件
+    df = convert_grouped_data_points_to_df(grouped_DataPoints)
+    save_df_to_txt(df, 'grouped_data_points.txt')
 
 if __name__ == "__main__":
     print("---------------------run-------------------")
