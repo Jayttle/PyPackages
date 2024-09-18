@@ -20,7 +20,17 @@ from sklearn.mixture import GaussianMixture
 from sklearn.model_selection import GridSearchCV, cross_val_score
 from JayttleProcess import TimeSeriesDataMethod, TBCProcessCsv, CommonDecorator, ListFloatDataMethod
 from JayttleProcess.ListFloatDataMethod import *
+import seaborn as sns
+from statsmodels.tsa.statespace.sarimax import SARIMAX
+from sklearn.metrics import mean_squared_error
+import matplotlib.pyplot as plt
+from sklearn.model_selection import ParameterGrid
+
 from JayttleProcess.TimeSeriesDataMethod import TimeSeriesData
+plt.rcParams['font.sans-serif'] = ['SimSun']  # 指定宋体为默认字体
+plt.rcParams['font.sans-serif'] = 'SimSun'  # 使用指定的中文字体
+plt.rcParams['axes.unicode_minus'] = False  # 用来正常显示负号
+warnings.filterwarnings("ignore")
 
 class DataPoint:
     def __init__(self,csv_file: str, point_id: str, north_coordinate: float, east_coordinate: float, elevation: float,
@@ -155,6 +165,38 @@ def read_csv_to_datapoints(csv_file: str) -> list[DataPoint]:
             east_coordinate_error=row['GNSS矢量观测.Y增量'],
             elevation_error=row['GNSS矢量观测.Z增量'],
             height_error=row['GNSS矢量观测.解类型']
+        )
+        datapoints.append(datapoint)
+    return datapoints
+
+
+def read_csv_to_datapoints_version2(csv_file: str) -> list:
+    with open(csv_file, 'rb') as f:
+        rawdata = f.read()
+        encoding = chardet.detect(rawdata)['encoding']
+    df = pd.read_csv(csv_file, sep='\t', parse_dates=['GNSS矢量观测.开始时间', 'GNSS矢量观测.结束时间'], encoding=encoding)
+    datapoints = []
+    for index, row in df.iterrows():
+        datapoint = DataPoint(
+            csv_file=csv_file,
+            point_id=row['点ID'],
+            north_coordinate=row['北坐标'],
+            east_coordinate=row['东坐标'],
+            elevation=row['高程'],
+            latitude=row['纬度（地方）'],  # 更新为“地方”
+            longitude=row['经度（地方）'],  # 更新为“地方”
+            ellipsoid_height=row['GNSS矢量观测.起点ID'],
+            start_time=row['GNSS矢量观测.开始时间'],
+            end_time=row['GNSS矢量观测.结束时间'],
+            duration=row['GNSS矢量观测.持续时间'],  # 更新为“持续时间”
+            pdop=row['GNSS矢量观测.PDOP'],
+            rms=row['GNSS矢量观测.均方根'],
+            horizontal_accuracy=row['GNSS矢量观测.水平精度'],
+            vertical_accuracy=row['GNSS矢量观测.垂直精度'],
+            north_coordinate_error=row['GNSS矢量观测.X增量'],
+            east_coordinate_error=row['GNSS矢量观测.Y增量'],
+            elevation_error=row['GNSS矢量观测.Z增量'],
+            height_error=row['网平差.高度误差']  # 更新为“高度误差”
         )
         datapoints.append(datapoint)
     return datapoints
@@ -541,6 +583,22 @@ def load_csv_data(folder_path: str) -> List[DataPoint]:
             csv_file_path = os.path.join(folder_path, filename)
             data_points.extend(read_csv_to_datapoints(csv_file_path))
     return data_points
+def load_csv_data_version2(folder_path: str) -> List[DataPoint]:
+    """
+    Load CSV data from the specified folder.
+
+    Args:
+        folder_path (str): The path to the folder containing CSV files.
+
+    Returns:
+        List[DataPoint]: A list of data points loaded from the CSV files.
+    """
+    data_points = []
+    for filename in os.listdir(folder_path):
+        if filename.endswith('.csv'):
+            csv_file_path = os.path.join(folder_path, filename)
+            data_points.extend(read_csv_to_datapoints_version2(csv_file_path))
+    return data_points
 
 
 def load_csv_data_with_all(folder_path: str) -> List[DataPoint]:
@@ -614,6 +672,48 @@ def load_DataPoints() -> dict[str, list[DataPoint]]:
 
     return grouped_DataPoints
 
+def load_DataPoints_mini() -> dict[str, list[DataPoint]]:
+    locations = {
+        "R031": (35.473642676796, 118.054358431073),
+        "R032": (35.473666223407, 118.054360237421),
+        "R051": (35.473944469154, 118.048584306326),
+        "R052": (35.473974942138, 118.048586858521),
+        "R071": (35.474177696631, 118.044201562812),
+        "R072": (35.474204534806, 118.044203691212),
+        "R081": (35.474245973695, 118.042930824340),
+        "R082": (35.474269576552, 118.042932741649)
+    }
+    # 定义一个字典来存储每个位置对应的东北坐标
+    east_north_coordinates = {}
+    # 批量转换经纬度坐标为东北坐标
+    for location, (lat, lon) in locations.items():
+        easting, northing = TBCProcessCsv.convert_coordinates(lat, lon)
+        east_north_coordinates[location] = (easting, northing)
+    Receiver_DataPoints = load_DataPoints_return_dict_mini()
+    grouped_DataPoints = {}  # 存储组合后的数据点
+    for key, DataPoints in Receiver_DataPoints.items():
+        prefix = key[:9]  # 假设按前缀进行分组
+        marker_name = key[:4] 
+        
+        if prefix not in grouped_DataPoints:
+            grouped_DataPoints[prefix] = []
+
+        # Subtract easting and northing from DataPoints
+        for datapoint in DataPoints:
+            easting, northing = east_north_coordinates[marker_name]
+            datapoint.east_coordinate -= easting
+            datapoint.north_coordinate -= northing
+            datapoint.east_coordinate *= 1000
+            datapoint.north_coordinate *= 1000
+            
+        grouped_DataPoints[prefix].extend(DataPoints)  # 将数据点添加到相应的列表中
+
+    # 打印结果
+    for i, (prefix, DataPoints) in enumerate(grouped_DataPoints.items()):
+        print(f"索引: {i}, 前缀: {prefix}, 数据点数: {len(DataPoints)}")
+
+    return grouped_DataPoints
+
 def load_DataPoints_return_dict() -> dict[str, list[DataPoint]]:
     data_save_path = {
         'R031_1619': r'D:\Ropeway\R031_1619',
@@ -636,6 +736,22 @@ def load_DataPoints_return_dict() -> dict[str, list[DataPoint]]:
         print(f"{key}: {data_save_path[key]}")
         Receiver_DataPoints[key] = load_csv_data(data_save_path[key])
     return Receiver_DataPoints
+
+def load_DataPoints_return_dict_mini() -> dict[str, list[DataPoint]]:
+    # 需要替换的组名
+    groups = ['R031_0407','R051_0407', 'R071_0407', 'R081_0407', 'R031_1215','R051_1215', 'R071_1215', 'R081_1215']
+    data_save_path = {}
+    for item in groups:
+        data_save_path[item] = rf'D:\Program Files (x86)\Software\OneDrive\PyPackages_DataSave\new_data\{item}'
+
+    sorted_keys = sorted(data_save_path.keys())
+    Receiver_DataPoints = {}
+    for key in sorted_keys:
+        print(f"{key}: {data_save_path[key]}")
+        Receiver_DataPoints[key] = load_csv_data_version2(data_save_path[key])
+    return Receiver_DataPoints
+
+
 
 
 def calculate_daily_movements(combined_data: Dict[datetime, Tuple[Tuple[TimeSeriesData, TimeSeriesData], Tuple[TimeSeriesData, TimeSeriesData]]]) -> Dict[datetime, Tuple[float, float]]:
@@ -1254,33 +1370,33 @@ def find_consecutive_data(data_dict: dict[str, list[DataPoint]], target_key: str
         else:
             return 0
 
-def main_TODO11():
-    # Example usage:
-    # dates = ["2023-04-10", "2023-05-16","2023-06-06" ,"2023-07-07", "2023-07-09", "2023-08-11", "2023-10-31"]
-    dates_to_check = ["2023-08-08","2023-08-09","2023-08-10","2023-08-11","2023-08-12","2023-08-13","2023-08-14"]
-    receiver_to_check = ["R031_1215","R031_1619","R071_1215","R071_1619","R081_1619","R082_1619"]
-    grouped_DataPoints: dict[str, list[DataPoint]] = load_DataPoints()
-    outliers_time_dict: dict[str, list[str]] = {}
-    for key, list_datapoint in grouped_DataPoints.items():
-        print(f"{key}:{len(list_datapoint)}")
-        outliers_times = check_distance_return_time(list_datapoint)
-        for time_obj in outliers_times:
-            # 转换为字符串并进行切片操作
-            time_str = str(time_obj)
-            date_str = time_str[:10]
-            if date_str not in outliers_time_dict:
-                outliers_time_dict[date_str] = []
-            outliers_time_dict[date_str].append(f"{key}")
-    for receiver in receiver_to_check:
-        data_points_to_check = grouped_DataPoints[receiver]
-        filter_list_datapoint = []
-        for data in data_points_to_check:
-            time_str = str(data.start_time)
-            date_str = time_str[:10]
-            if date_str in dates_to_check:
-                filter_list_datapoint.append(data)
+# def main_TODO11():
+#     # Example usage:
+#     # dates = ["2023-04-10", "2023-05-16","2023-06-06" ,"2023-07-07", "2023-07-09", "2023-08-11", "2023-10-31"]
+#     dates_to_check = ["2023-08-08","2023-08-09","2023-08-10","2023-08-11","2023-08-12","2023-08-13","2023-08-14"]
+#     receiver_to_check = ["R031_1215","R031_1619","R071_1215","R071_1619","R081_1619","R082_1619"]
+#     grouped_DataPoints: dict[str, list[DataPoint]] = load_DataPoints()
+#     outliers_time_dict: dict[str, list[str]] = {}
+#     for key, list_datapoint in grouped_DataPoints.items():
+#         print(f"{key}:{len(list_datapoint)}")
+#         outliers_times = check_distance_return_time(list_datapoint)
+#         for time_obj in outliers_times:
+#             # 转换为字符串并进行切片操作
+#             time_str = str(time_obj)
+#             date_str = time_str[:10]
+#             if date_str not in outliers_time_dict:
+#                 outliers_time_dict[date_str] = []
+#             outliers_time_dict[date_str].append(f"{key}")
+#     for receiver in receiver_to_check:
+#         data_points_to_check = grouped_DataPoints[receiver]
+#         filter_list_datapoint = []
+#         for data in data_points_to_check:
+#             time_str = str(data.start_time)
+#             date_str = time_str[:10]
+#             if date_str in dates_to_check:
+#                 filter_list_datapoint.append(data)
 
-        plot_list_DataPoint(filter_list_datapoint, receiver)
+#         plot_list_DataPoint(filter_list_datapoint, receiver)
 
 def data_point_to_dict(dp: DataPoint) -> dict:
     return {
@@ -1344,9 +1460,279 @@ def main_TODO9():
     df = convert_grouped_data_points_to_df(grouped_DataPoints)
     save_df_to_txt(df, 'grouped_data_points.txt')
 
+
+def plot_df(filtered_df):
+    # 确保数据类型正确
+    filtered_df['start_time'] = pd.to_datetime(filtered_df['start_time'])
+    filtered_df['north_coordinate'] = pd.to_numeric(filtered_df['north_coordinate'], errors='coerce')
+
+    # 按时间排序
+    filtered_df = filtered_df.sort_values('start_time')
+
+    # 创建时间期数
+    filtered_df['time_period'] = range(1, len(filtered_df) + 1)
+
+    # 绘制时序图
+    plt.figure(figsize=(12, 6))
+    plt.plot(filtered_df['time_period'], filtered_df['north_coordinate'], marker='o', linestyle='-')
+
+    plt.xlabel('数据期数')
+    plt.ylabel('数值')
+    plt.title('时间序列数据')
+
+    # 隐藏右边框和上边框
+    ax = plt.gca()
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+
+    # 设置刻度朝向内部，并调整刻度与坐标轴的距离
+    ax.tick_params(axis='x', direction='in', pad=10)
+    ax.tick_params(axis='y', direction='in', pad=10)
+
+    # 添加虚线到 Y 轴刻度线
+    for y in ax.get_yticks():
+        ax.axhline(y, color='gray', linestyle='--', linewidth=0.5, alpha=0.7)
+
+    plt.tight_layout()  # 自动调整子图间的间距和标签位置
+    plt.show()
+
+    # 统计分析
+    print(filtered_df['north_coordinate'].describe())
+
+
+def ListDataPoint2pdDataFrame(grouped_DataPoints: dict[str, list[DataPoint]]) -> pd.DataFrame:
+    # 创建一个空的列表来存储数据
+    data_list = []
+    
+    # 遍历字典，提取数据
+    for group, points in grouped_DataPoints.items():
+        for point in points:
+            data_list.append({
+                'Group': group,
+                'csv_file': point.csv_file,
+                'point_id': point.point_id,
+                'north_coordinate': point.north_coordinate,
+                'east_coordinate': point.east_coordinate,
+                'elevation': point.elevation,
+                'latitude': point.latitude,
+                'longitude': point.longitude,
+                'ellipsoid_height': point.ellipsoid_height,
+                'start_time': point.start_time,
+                'end_time': point.end_time,
+                'duration': point.duration,
+                'pdop': point.pdop,
+                'rms': point.rms,
+                'horizontal_accuracy': point.horizontal_accuracy,
+                'vertical_accuracy': point.vertical_accuracy,
+                'north_coordinate_error': point.north_coordinate_error,
+                'east_coordinate_error': point.east_coordinate_error,
+                'elevation_error': point.elevation_error,
+                'height_error': point.height_error
+            })
+    
+    # 创建 DataFrame
+    df = pd.DataFrame(data_list)
+    # 对每组 group 中的 start_time 重复值只保留第一个
+    df = df.sort_values('start_time').drop_duplicates(subset=['Group', 'start_time'], keep='first')
+    return df
+
+def plot_seasonal_statistics(result: pd.DataFrame) -> None:
+    # 创建柱状图
+    season_order = ['春季', '夏季', '秋季', '冬季']
+    result['season'] = pd.Categorical(result['season'], categories=season_order, ordered=True)
+    plt.figure(figsize=(12, 6))
+    sns.barplot(data=result, x='season', y='sem', hue='Group', ci=None)
+
+    # 添加标题和标签
+    plt.title('北坐标标准差按组和季节')
+    plt.xlabel('季节')
+    plt.ylabel('标准差')
+
+    # 显示图例
+    plt.legend(title='组')
+    plt.tight_layout()
+
+    # 显示图形
+    plt.show()
+
+def plot_seasonal_dispointGroup(result: pd.DataFrame) -> None:
+    specific_group = 'R031_1215'
+    season_order = ['春季', '夏季', '秋季', '冬季']
+    result['season'] = pd.Categorical(result['season'], categories=season_order, ordered=True)
+    specific_result = result[result['Group'] == specific_group]
+
+    # 创建子图
+    fig, axs = plt.subplots(2, 2, figsize=(12, 10))
+    metrics = ['count', 'mean', 'std', 'sem']
+    titles = ['计数', '均值', '标准差', '标准误差']
+
+    for ax, metric, title in zip(axs.flatten(), metrics, titles):
+        sns.barplot(data=specific_result, x='season', y=metric, ax=ax, palette='Blues', ci=None)
+        ax.set_title(f'{title}对比：{specific_group}')
+        ax.set_xlabel('季节')
+        ax.set_ylabel(title)
+
+    plt.tight_layout()
+    plt.show()
+
+def main_TODO10():
+    grouped_DataPoints: dict[str, list[DataPoint]] = load_DataPoints_mini()
+    df = ListDataPoint2pdDataFrame(grouped_DataPoints)
+
+    # 确保数据类型正确
+    df['start_time'] = pd.to_datetime(df['start_time'])
+    df['north_coordinate'] = pd.to_numeric(df['north_coordinate'], errors='coerce')
+
+    # 添加季节列
+    def get_season(date):
+        month = date.month
+        if month in [12, 1, 2]:
+            return '冬季'
+        elif month in [3, 4, 5]:
+            return '春季'
+        elif month in [6, 7, 8]:
+            return '夏季'
+        else:
+            return '秋季'
+
+    df['season'] = df['start_time'].dt.to_period('M').dt.to_timestamp().apply(lambda x: get_season(x))
+
+    # 统计各个组和季节的数据
+    result = df.groupby(['Group', 'season'])['north_coordinate'].agg(
+        count='count',
+        mean='mean',
+        std='std',
+        min='min',
+        max='max'
+    ).reset_index()
+
+    # 计算中误差
+    result['sem'] = df.groupby(['Group', 'season'])['north_coordinate'].sem().values
+
+    # 输出到 Excel
+    result.to_excel("seasonal_statistics.xlsx", index=False)
+    plot_seasonal_dispointGroup(result)
+    print(result)
+
+
+def read_and_prepare_data(df):
+    # 确保数据类型正确
+    df['start_time'] = pd.to_datetime(df['start_time'])
+    df['north_coordinate'] = pd.to_numeric(df['north_coordinate'], errors='coerce')
+
+    # 将 start_time 设置为索引
+    df.set_index('start_time', inplace=True)
+
+    # 按日期排序
+    df.sort_index(inplace=True)
+
+    # 填补缺失日期的值（可以选择插值、前向填充等方法）
+    df = df.asfreq('D')  # 使用每日频率
+    df['north_coordinate'].fillna(method='ffill', inplace=True)  # 前向填充缺失值
+
+    # 划分训练集与测试集
+    df_train = df.iloc[:-24]
+    df_test = df.iloc[-24:]
+
+    print("训练集样本数：", len(df_train))
+    print("测试集样本数：", len(df_test))
+    return df_train, df_test
+
+def evaluate_sarima(params, df_train, df_test):
+    model = SARIMAX(df_train['north_coordinate'], 
+                    order=params['order'], 
+                    seasonal_order=params['seasonal_order'])
+    model_fit = model.fit(disp=False)
+    
+    forecast = model_fit.forecast(steps=len(df_test))
+    
+    df_test['预测'] = forecast.values
+    df_test['误差'] = (df_test['预测'] - df_test['north_coordinate']) / df_test['north_coordinate']
+    
+    mse = mean_squared_error(df_test['north_coordinate'], df_test['预测'])
+    return mse
+
+def grid_search_sarima(df_train, df_test):
+    best_params = None
+    best_mse = np.inf
+    
+    # 调整参数网格范围
+    param_grid = {
+        'order': [(p, d, q) for p in range(0, 3) for d in [0] for q in range(0, 3)],
+        'seasonal_order': [
+            (P, D, Q, S) for P in range(0, 2) 
+            for D in [0, 1] 
+            for Q in range(0, 2) 
+            for S in [7, 12, 31, 365]  # 选择合适的季节性周期
+        ]
+    }
+
+    for params in ParameterGrid(param_grid):
+        mse = evaluate_sarima(params, df_train, df_test)
+        print(f"测试参数 {params} 的均方误差: {mse}")
+        
+        if mse < best_mse:
+            best_mse = mse
+            best_params = params
+    
+    print(f"最佳参数组合: {best_params}")
+    print(f"最佳均方误差: {best_mse}")
+    
+    return best_params
+
+def train_and_predict_sarima(df_train, df_test):
+    best_params = grid_search_sarima(df_train, df_test)
+    
+    model = SARIMAX(df_train['north_coordinate'], 
+                    order=best_params['order'], 
+                    seasonal_order=best_params['seasonal_order'])
+    model_fit = model.fit(disp=False)
+    
+    forecast = model_fit.forecast(steps=len(df_test))
+    
+    df_test['预测'] = forecast.values
+    df_test['误差'] = (df_test['预测'] - df_test['north_coordinate']) / df_test['north_coordinate']
+    comparison_df = df_test[['north_coordinate', '预测', '误差']]
+    
+    print("\n实际值、预测值和误差对比:")
+    print(comparison_df)
+    
+    mse = mean_squared_error(df_test['north_coordinate'], df_test['预测'])
+    print(f"均方误差 (MSE): {mse}")
+
+    plt.figure(figsize=(12, 6))
+    plt.plot(df_train.index, df_train['north_coordinate'], label='训练集')
+    plt.plot(df_test.index, df_test['north_coordinate'], label='实际值', color='blue')
+    plt.plot(df_test.index, df_test['预测'], label='预测值', color='red')
+    plt.legend()
+    plt.title('SARIMA预测')
+    plt.show()
+
+def main_TODO11():
+    grouped_DataPoints: dict[str, list[DataPoint]] = load_DataPoints_mini()
+    df = ListDataPoint2pdDataFrame(grouped_DataPoints)
+    specific_group = 'R031_1215'
+    filtered_df = df[df['Group'] == specific_group]
+    filtered_df['start_time'] = pd.to_datetime(filtered_df['start_time'])
+    filtered_df['north_coordinate'] = pd.to_numeric(filtered_df['north_coordinate'], errors='coerce')
+    filtered_df = filtered_df.sort_values('start_time')
+
+    # 选择只有 start_time 和 north_coordinate 这两列
+    filtered_df = filtered_df[['start_time', 'north_coordinate']]
+    
+    # 找出重复的 start_time
+    duplicates = filtered_df[filtered_df.duplicated(subset='start_time', keep=False)]
+    print("重复的 start_time 部分：")
+    print(duplicates)
+
+    # 继续后续处理（如果有）
+    df_train, df_test = read_and_prepare_data(filtered_df)
+    train_and_predict_sarima(df_train, df_test)
+
+
 if __name__ == "__main__":
     print("---------------------run-------------------")
-    main_TODO9()
+    main_TODO11()
     
 #main_TODO2()
 # endregion
