@@ -1,0 +1,3 @@
+打包指定py文件：pyinstaller -F Control_GUI.py -w
+打包指定文件并且使用--hidden-import选项来明确指定需要导入的模块pyinstaller --onefile --hidden-import=pytesseract Control_GUI.py -w
+pyinstaller.exe -F -w Control_GUI.spec

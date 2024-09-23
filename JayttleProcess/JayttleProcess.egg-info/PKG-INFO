@@ -1,0 +1,25 @@
+Metadata-Version: 2.1
+Name: JayttleProcess
+Version: 0.4.1
+Summary: modifty time:2024-08-30 
+Home-page: https://github.com/Jayttle/PyPackages.git
+Author: Jayttle
+Author-email: 294448068@qq.com
+Requires-Dist: pyautogui
+Requires-Dist: matplotlib
+Requires-Dist: statsmodels
+Requires-Dist: scikit-learn
+Requires-Dist: EMD-signal
+Requires-Dist: PyWavelets
+Requires-Dist: pymysql
+Requires-Dist: numpy
+Requires-Dist: seaborn
+Requires-Dist: pandas
+Requires-Dist: openpyxl
+Requires-Dist: chardet
+Requires-Dist: pyproj
+Requires-Dist: beautifulsoup4
+Requires-Dist: selenium
+Requires-Dist: pytesseract
+Requires-Dist: requests
+Requires-Dist: pyswarm
