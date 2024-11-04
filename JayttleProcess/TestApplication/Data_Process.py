@@ -1728,11 +1728,73 @@ def main_TODO11():
     # 继续后续处理（如果有）
     df_train, df_test = read_and_prepare_data(filtered_df)
     train_and_predict_sarima(df_train, df_test)
+    
+def main_TODO12():
+    grouped_DataPoints: dict[str, list[DataPoint]] = load_DataPoints_mini()
+    df = ListDataPoint2pdDataFrame(grouped_DataPoints)
+
+    # 确保数据类型正确
+    df['start_time'] = pd.to_datetime(df['start_time'])
+    df['north_coordinate'] = pd.to_numeric(df['north_coordinate'], errors='coerce')
+
+    # 添加月份列
+    df['month'] = df['start_time'].dt.to_period('M').dt.to_timestamp().dt.strftime('%Y-%m')  # 格式化为 'YYYY-MM'
+
+    # 定义要分析的组
+    groups = ['R031_0407','R051_0407', 'R071_0407', 'R081_0407', 'R031_1215','R051_1215', 'R071_1215', 'R081_1215']
+
+    # 创建一个 Excel 写入对象
+    with pd.ExcelWriter('group_results.xlsx') as writer:
+        # 针对每个组进行统计
+        for specific_group in groups:
+            df_specific = df[df['Group'] == specific_group]  # 只保留特定组的数据
+
+            # 统计该组和月份的数据
+            result = df_specific.groupby(['month'])['north_coordinate'].agg(
+                count='count',
+                mean='mean',
+                std='std',
+                min='min',
+                max='max'
+            ).reset_index()
+
+            # 将结果写入 Excel 中以 group 的值为工作表名
+            result.to_excel(writer, sheet_name=specific_group, index=False)
+
+            # 输出结果到控制台（可选）
+            print(f"Results for {specific_group}:\n", result)
+
+
+def visualize_results(result: pd.DataFrame):
+    # 将月份转换为日期格式
+    result['month'] = pd.to_datetime(result['month'])
+
+    # 设置画布
+    plt.figure(figsize=(14, 10))
+
+    # 绘制计数、均值、标准差、最小值和最大值的折线图
+    sns.lineplot(data=result, x='month', y='count', marker='o', label='计数', color='blue')
+    sns.lineplot(data=result, x='month', y='mean', marker='o', label='均值', color='orange')
+    sns.lineplot(data=result, x='month', y='std', marker='o', label='标准差', color='green')
+    sns.lineplot(data=result, x='month', y='min', marker='o', label='最小值', color='red')
+    sns.lineplot(data=result, x='month', y='max', marker='o', label='最大值', color='purple')
+
+    # 添加图例、标题和标签
+    plt.title('R031_1215 数据统计比较（按月）', fontsize=16)
+    plt.xlabel('月份', fontsize=14)
+    plt.ylabel('值', fontsize=14)
+    plt.xticks(rotation=45)
+    plt.legend()
+    plt.grid()
+    plt.tight_layout()
+
+    # 显示图形
+    plt.show()
 
 
 if __name__ == "__main__":
     print("---------------------run-------------------")
-    main_TODO11()
+    main_TODO12()
     
 #main_TODO2()
 # endregion
