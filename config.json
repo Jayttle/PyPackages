@@ -1,0 +1,18 @@
+{
+    "SQL_tianmeng_config":{
+        "host": "47.98.201.213",
+        "user": "root",
+        "password": "TJ1qazXSW@",
+        "database": "tianmeng_cableway"
+    },
+    "QQ_email_config":{
+        "username": "3231518238@qq.com",
+        "passwd": "ehrhfcvuhatucide",
+        "receiver": "294448068@qq.com"
+    },
+    "other_config": {
+        "setting1": "value1",
+        "setting2": "value2"
+    }
+}
+

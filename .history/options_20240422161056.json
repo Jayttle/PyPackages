@@ -1,0 +1,16 @@
+{
+  "LocalSavePath": "D:\\Ropeway\\GNSS\\FTP_File_Situation",
+  "RootFolder": "tianmeng",
+  "FtpOptions": {
+    "Address": "47.98.201.213",
+    "Port": 21,
+    "UserName": "ftptest",
+    "Password": "spectra_12345678"
+  },
+  "StartTime": "2024-01-07T00:00:00",
+  "StopTime": "2024-01-10T00:00:00",
+  "ClientNum": 5,
+  "FolderType": 1,
+  "RewriteMarkerName": true,
+  "MarkerNames": []
+}

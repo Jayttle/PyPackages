@@ -1,0 +1,14 @@
+{
+    "avr":[
+        "Time", "StationID", "FixMode", "Yaw", "Tilt", "Range", "PDOP", "SateNum"
+    ],
+    "ggkx":[
+        "Time", "StationID", "ReceiverID", "Lat", "Lon", "GeoHeight", "FixMode", "SateNum", "PDOP", "SigmaE", "SigmaN", "SigmaU", "PropAge"
+    ],
+    "met":[
+        "Time", "StationID", "Temperature", "Humidness", "Pressure", "WindSpeed", "WindDirection"
+    ],
+    "tiltmeter":[
+        "Time", "StationID", "Pitch", "Roll"
+    ]
+}
