@@ -33,6 +33,24 @@ def run_main_0(read_file_path, save_file_path):
     summed_load = df.groupby('日期')[list(renamed_columns.values())].sum().reset_index()
     summed_load.to_excel(save_file_path, index=False, sheet_name='整体')
 
+
+# 定义一个函数来统计高峰和低谷时间的出现次数
+def get_peak_valley_stats(df, peak_col, valley_col, key):
+    # 获取高峰和低谷的统计信息
+    peak_counts = df[peak_col].value_counts()
+    valley_counts = df[valley_col].value_counts()
+    
+    # 创建一个DataFrame来合并这些统计结果
+    peak_valley_stats = pd.DataFrame({
+        '时间': list(peak_counts.index) + list(valley_counts.index),
+        '类型': ['高峰'] * len(peak_counts) + ['低谷'] * len(valley_counts),
+        '次数': list(peak_counts.values) + list(valley_counts.values),
+        '分类': [key] * (len(peak_counts) + len(valley_counts))
+    })
+    
+    return peak_valley_stats
+
+
 def run_main_1(file_path):
     """
     基于只有日负荷数据总和的表格，生成多个sheet，分别是整体、工作日、非工作日的负荷分析
@@ -68,7 +86,7 @@ def run_main_1(file_path):
     result_df['峰谷差/最高负荷'] = (result_df['日高峰'] - result_df['日低谷']) / result_df['日高峰']
 
     # 读取非工作日 JSON 文件
-    with open(r'E:\OneDrive\PyPackages\Jayttle_for_work\23.浦东新区四大重点经济圈负荷分析\非工作日.json', 'r', encoding='utf-8') as json_file:
+    with open(r'E:\OneDrive\PyPackages\Jayttle_for_work\工作\23.浦东新区四大重点经济圈负荷分析\非工作日.json', 'r', encoding='utf-8') as json_file:
         non_working_days_data = json.load(json_file)
 
     non_working_days = set(non_working_days_data['non_working_days'])
@@ -141,7 +159,22 @@ def run_main_1(file_path):
             del writer.book['调休日负荷分析']
         adjust_days_analysis.to_excel(writer, sheet_name='调休日负荷分析', index=True)
 
-    print("数据已保存到 Excel 文件的...数据")
+        # 对非工作日数据进行统计
+        non_working_peak_valley_stats = get_peak_valley_stats(non_working_days_analysis, '高峰时间', '低谷时间', '非工作日')
+
+        # 对工作日数据进行统计
+        working_peak_valley_stats = get_peak_valley_stats(working_days_analysis, '高峰时间', '低谷时间', '工作日')
+
+        # 对节假日数据进行统计
+        holiday_peak_valley_stats = get_peak_valley_stats(holiday_days_analysis, '高峰时间', '低谷时间', '节假日')
+
+        # 合并所有数据
+        combined_peak_valley_stats = pd.concat([non_working_peak_valley_stats, working_peak_valley_stats, holiday_peak_valley_stats])
+
+        # 将统计结果写入Excel文件的'峰谷情况'工作表
+        if '峰谷情况' in writer.book.sheetnames:
+            del writer.book['峰谷情况']
+        combined_peak_valley_stats.to_excel(writer, sheet_name='峰谷情况', index=False)
 
     # 输出工作日和非工作日天数
     working_days_count = len(working_days)
@@ -226,7 +259,7 @@ def run_main_3(fuhe_file_path, yongdian_file_path, save_file_path = False, worki
         merged_df[col] = merged_df[col].where(merged_df[col] >= 0)  # 负值设为NaN
 
     # 读取非工作日 JSON 文件
-    with open(r'E:\OneDrive\PyPackages\Jayttle_for_work\23.浦东新区四大重点经济圈负荷分析\非工作日.json', 'r', encoding='utf-8') as json_file:
+    with open(r'E:\OneDrive\PyPackages\Jayttle_for_work\工作\23.浦东新区四大重点经济圈负荷分析\非工作日.json', 'r', encoding='utf-8') as json_file:
         non_working_days_data = json.load(json_file)
 
     non_working_days = set(non_working_days_data['non_working_days'])
@@ -311,7 +344,7 @@ def run_main_4(fuhe_file_path, yongdian_file_path, save_file_path = False):
         merged_df[col] = merged_df[col].where(merged_df[col] >= 0)  # 负值设为NaN
 
     # 读取非工作日 JSON 文件
-    with open(r'E:\OneDrive\PyPackages\Jayttle_for_work\23.浦东新区四大重点经济圈负荷分析\非工作日.json', 'r', encoding='utf-8') as json_file:
+    with open(r'E:\OneDrive\PyPackages\Jayttle_for_work\工作\23.浦东新区四大重点经济圈负荷分析\非工作日.json', 'r', encoding='utf-8') as json_file:
         non_working_days_data = json.load(json_file)
     # 将 '日期' 列转换为 datetime 类型
     merged_df['日期'] = pd.to_datetime(merged_df['日期'], format='%Y_%m_%d %H:%M:%S', errors='coerce')
