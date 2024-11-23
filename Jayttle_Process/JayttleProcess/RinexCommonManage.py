@@ -224,7 +224,6 @@ class MergeFiles:
         sleep(0.1)
         return os.path.exists(merge_full_name)
 
-
 def filter_and_group_folders(directory: str) -> dict:
     """
     根据文件夹名称对文件夹进行过滤和分组。
@@ -817,8 +816,6 @@ def convert_file(rnx_info: RinexFileInfo, delete_crx_file: bool) -> None:
                 os.remove(rnx_info.file_info)
         else:
             print("CRX to RNX conversion failed with error:", process.stderr.read())
-
-
 
 
 def merge_files_threadpool(file_groups: list[list[RinexFileInfo]], merge_path: str, merge_file_num: int) -> None:

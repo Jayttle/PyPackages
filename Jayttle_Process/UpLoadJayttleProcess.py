@@ -2,7 +2,7 @@ import subprocess
 import re
 
 # 指定文件夹路径
-folder_path = r"D:\Program Files (x86)\Software\OneDrive\PyPackages\JayttleProcess"
+folder_path = r"D:\Program Files (x86)\Software\OneDrive\PyPackages\Jayttle_Process"
 
 # 构造命令
 command = "python setup.py sdist bdist_wheel"
@@ -18,7 +18,7 @@ except subprocess.CalledProcessError as e:
 
 
 # 设置setup.py文件路径
-setup_file_path = r"D:\Program Files (x86)\Software\OneDrive\PyPackages\JayttleProcess\setup.py"
+setup_file_path = r"D:\Program Files (x86)\Software\OneDrive\PyPackages\Jayttle_Process\setup.py"
 
 # 读取setup.py文件内容
 with open(setup_file_path, 'r', encoding='utf-8') as file:

@@ -7,10 +7,12 @@ JayttleProcess/FTPCommonUse.py
 JayttleProcess/ListFloatDataMethod.py
 JayttleProcess/MachineLearning.py
 JayttleProcess/PNGProcess.py
+JayttleProcess/PredictiveModel.py
 JayttleProcess/RinexCommonManage.py
 JayttleProcess/SQLCommonUse.py
 JayttleProcess/TBCProcessCsv.py
 JayttleProcess/TiltmeterCommonUse.py
+JayttleProcess/TimeDataFrameMethod.py
 JayttleProcess/TimeSeriesDataMethod.py
 JayttleProcess/WebsiteCrawler.py
 JayttleProcess/__init__.py

@@ -14,12 +14,13 @@ from email.parser import BytesParser
 from email.header import decode_header, make_header
 
 class EmailUseType:
-    def __init__(self, config_file_path: str) -> None:
+    def __init__(self, config_file_path: str = None) -> None:
         self.sender: Optional[str] = None
         self.user: Optional[str] = None
         self.passwd: Optional[str] = None
         self.receiver: Optional[str] = None
-        self.load_emailInfo(config_file_path) 
+        if config_file_path is not None:
+            self.load_emailInfo(config_file_path) 
 
     def load_emailInfo(self, file_path: str):
         try:
@@ -42,6 +43,11 @@ class EmailUseType:
             print("文件内容不是有效的 JSON 格式。")
         except Exception as e:
             print(f"发生错误：{e}")
+
+    def input_emailInfo(self, sender: str, passwd: str, receiver: str):
+        self.sender = self.user = sender
+        self.passwd = passwd
+        self.receiver = receiver
 
     def check_emailInfo(self) -> None:
         print('----- Email Info -----')
@@ -238,6 +244,5 @@ class EmailUseType:
         pop_server.quit()
 
 if __name__ =='__main__':
-    config_path = r'D:\Program Files (x86)\Software\OneDrive\PyPackages\config.json'
-    email_use = EmailUseType(config_path)
+    email_use = EmailUseType()
     email_use.check_emailInfo()

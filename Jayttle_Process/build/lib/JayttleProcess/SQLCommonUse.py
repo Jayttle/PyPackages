@@ -8,12 +8,12 @@ import time
 import json
 from datetime import datetime, timedelta
 from typing import Union, Optional
-from tabulate import tabulate
 
 class SQLUseType:
-    def __init__(self, SQL_config_path: str) -> None:
+    def __init__(self, SQL_config_path: str = None) -> None:
         self.SQL_CONFIG: dict = {}
-        self.load_SQLConfig(SQL_config_path)
+        if SQL_config_path is not None:
+            self.load_SQLConfig(SQL_config_path)
         
     def load_SQLConfig(self, SQL_config_path: str) -> None:
         try:
@@ -35,6 +35,13 @@ class SQLUseType:
             print("文件内容不是有效的 JSON 格式。")
         except Exception as e:
             print(f"发生错误：{e}")
+
+    def input_emailInfo(self, host: str, user: str, password: str, database: str):
+        self.SQL_CONFIG['host'] = host
+        self.SQL_CONFIG['user']  = user
+        self.SQL_CONFIG['password']  = password
+        self.SQL_CONFIG['database'] = database
+
 
     def check_SQLInfo(self) -> None:
         print('-----check------')
@@ -237,9 +244,9 @@ if __name__ == '__main__':
     sql_use = SQLUseType(config_path)
     sql_use.check_SQLInfo()
 
-    sql_statement = """
-    SELECT * FROM arr
-    WHERE time >= '2024-07-01 00:00:00' AND time <= '2024-07-01 00:10:00';
-    """
-    file_path = "SQLquery_results.txt"
-    sql_use.execute_sql_and_save_to_txt(sql_statement, file_path)
+    # 构建查询语句获取昨天的数据
+    yesterday = (datetime.now() - timedelta(1)).strftime('%Y-%m-%d')
+    query = f"SELECT * FROM avr WHERE DATE(time) = '{yesterday}'"
+    # 执行查询并保存到文件
+    file_path = 'yesterday_data.txt'
+    result = sql_use.execute_sql_and_save_to_txt(query, file_path)

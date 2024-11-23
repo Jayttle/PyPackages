@@ -1,7 +1,0 @@
-.idea/
-**/__pycache/
-*.py[coid]
-
-img/PixPin*
-img/capture*
-test/
