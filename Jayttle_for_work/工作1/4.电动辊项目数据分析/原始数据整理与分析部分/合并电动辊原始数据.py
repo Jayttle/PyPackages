@@ -1,47 +1,45 @@
 import os
 import pandas as pd
 
-def merge_csv_in_subfolders(base_dir):
+def merge_csv_in_folder(folder_path):
     """
-    遍历指定文件夹（base_dir）中的所有子文件夹，
-    将每个子文件夹内的两个CSV文件合并，并将合并后的结果保存在每个子文件夹内。
+    读取指定文件夹中的所有CSV文件，并将它们合并，
+    最后根据 'datetime' 列进行排序，并保存为一个新的CSV文件。
 
     参数：
-    base_dir (str): 存储子文件夹的根目录路径。
+    folder_path (str): 目标文件夹的路径。
     """
-    # 遍历指定文件夹下的所有子文件夹
-    for subfolder in os.listdir(base_dir):
-        subfolder_path = os.path.join(base_dir, subfolder)
+    # 获取文件夹中所有CSV文件
+    csv_files = [f for f in os.listdir(folder_path) if f.endswith('.csv')]
+    
+    if len(csv_files) == 0:
+        print(f"文件夹 '{folder_path}' 中没有CSV文件，跳过。")
+        return
 
-        # 确保是一个文件夹
-        if os.path.isdir(subfolder_path):
-            # 获取子文件夹中的所有CSV文件
-            csv_files = [f for f in os.listdir(subfolder_path) if f.endswith('.csv')]
+    # 读取所有CSV文件并合并
+    dfs = []
+    for csv_file in csv_files:
+        file_path = os.path.join(folder_path, csv_file)
+        df = pd.read_csv(file_path)
+        dfs.append(df)
+    
+    # 合并所有CSV文件
+    merged_df = pd.concat(dfs, ignore_index=True)
 
-            if len(csv_files) == 2:
-                # 假设子文件夹中只有两个CSV文件
-                file1_path = os.path.join(subfolder_path, csv_files[0])
-                file2_path = os.path.join(subfolder_path, csv_files[1])
+    # 假设'datetime'列存在，确保其是日期时间格式
+    merged_df['datetime'] = pd.to_datetime(merged_df['datetime'], errors='coerce')
 
-                # 读取两个CSV文件
-                df1 = pd.read_csv(file1_path)
-                df2 = pd.read_csv(file2_path)
+    # 按照'datetime'列排序
+    merged_df = merged_df.sort_values(by='datetime')
 
-                # 合并两个CSV文件（按行连接）
-                merged_df = pd.concat([df1, df2], ignore_index=True)
+    # 生成合并后的文件名
+    merged_file_path = os.path.join(folder_path, "4778-1_0901-1204.csv")
 
-                # 生成合并后的文件名
-                merged_file_path = os.path.join(subfolder_path, "merged.csv")
+    # 将合并后的数据保存到新的CSV文件
+    merged_df.to_csv(merged_file_path, index=False)
 
-                # 将合并后的数据保存到子文件夹中的新CSV文件
-                merged_df.to_csv(merged_file_path, index=False)
-
-                print(f"已在 '{subfolder_path}' 中合并并保存为 'merged.csv'")
-            else:
-                print(f"子文件夹 '{subfolder}' 中没有找到两个CSV文件，跳过该文件夹。")
-        else:
-            print(f"'{subfolder}' 不是一个文件夹，跳过。")
+    print(f"所有CSV文件已合并并根据 'datetime' 列排序，结果保存为 'merged_sorted.csv'")
 
 # 使用示例
-base_dir = r'C:\Users\Jayttle\Desktop\电动辊原始数据'  # 替换为你的根目录路径
-merge_csv_in_subfolders(base_dir)
+folder_path = r'C:\Users\Jayttle\Desktop\电动辊原始数据\4778-1'  # 替换为你的文件夹路径
+merge_csv_in_folder(folder_path)
